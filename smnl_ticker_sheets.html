@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>SMB4 League Ticker — Scores & Headlines </title>
+<title>SMNL League Ticker — Scores & Headlines</title>
 <style>
 
 @import url('https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Baloo+2:wght@600;700&display=swap');
@@ -142,18 +142,6 @@ html, body{
   letter-spacing: .5px;
 }
 
-.item .league-badge{
-  font-family: 'Teko', sans-serif;
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--gold);
-  border: 1.5px solid var(--gold);
-  padding: 2px 7px 0;
-  border-radius: 4px;
-  margin-right: 14px;
-  letter-spacing: 1px;
-}
-
 .score-box{
   flex: 0 0 auto;
   width: 340px;
@@ -206,7 +194,7 @@ html, body{
 
 <div class="ticker-bar">
   <div class="league-tag">
-    <div class="name">SMNL</div>
+    <div class="name" id="leagueName">SMNL</div>
     <div class="sub">SMB4 &middot; DISCORD</div>
   </div>
   <div class="score-box" id="scoreBox">
@@ -223,7 +211,7 @@ html, body{
 // PASTE YOUR PUBLISHED GOOGLE SHEET CSV URL BELOW (headlines only)
 // (File -> Share -> Publish to web -> CSV, in Google Sheets)
 // ============================================================
-const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSP59wDgCakUu1rGQMs2OaOXyGOqM-z0Hgp1MDbSMxoKswawRwByrmK2E4GwX_Y9hNQl5Tmw3IDmiWo/pub?gid=0&single=true&output=csv";
+const SHEET_CSV_URL = "PASTE_YOUR_PUBLISHED_CSV_LINK_HERE";
 
 // ============================================================
 // SMNL Supabase config (scores) — from the API request found in
@@ -238,7 +226,7 @@ const LEAGUES = [
 ];
 
 // How many finished games to pull per league, most recent first.
-const GAMES_PER_LEAGUE = 8;
+const GAMES_PER_LEAGUE = 24;
 
 // How often to re-check both sources for updates, in seconds.
 const REFRESH_SECONDS = 60;
@@ -353,10 +341,8 @@ function renderScoreInner(it){
   const homeWin = h > a;
   const showFinalTag = it.innings && it.innings !== 9;
   const finalTag = showFinalTag ? `<span class="final-tag">F/${it.innings}</span>` : "";
-  const leagueBadge = it.league ? `<span class="league-badge">${it.league}</span>` : "";
   return `
     <div class="item">
-      ${leagueBadge}
       <span class="team ${awayWin ? "win" : ""}">${it.away}</span>
       <span class="score">${it.awayScore}</span>
       <span class="at">@</span>
@@ -377,6 +363,7 @@ function renderHeadlineInner(it){
 
 const scoreBox = document.getElementById("scoreBox");
 const scoreSlide = document.getElementById("scoreSlide");
+const leagueName = document.getElementById("leagueName");
 const track = document.getElementById("track");
 document.documentElement.style.setProperty("--duration", SCROLL_SECONDS + "s");
 
@@ -404,8 +391,10 @@ function showScore(index){
     return;
   }
   scoreBox.style.display = "block";
+  const it = scoreItems[index];
+  leagueName.textContent = it.league ? `${it.league} LEAGUE` : "SMNL";
   scoreSlide.classList.remove("enter");
-  scoreSlide.innerHTML = `<div class="score-fit">${renderScoreInner(scoreItems[index])}</div>`;
+  scoreSlide.innerHTML = `<div class="score-fit">${renderScoreInner(it)}</div>`;
   void scoreSlide.offsetWidth; // force reflow so the animation replays
   scoreSlide.classList.add("enter");
   requestAnimationFrame(fitScoreContent);
