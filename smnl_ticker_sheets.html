@@ -5,6 +5,51 @@
 <title>SMB4 League Ticker — Scores & Headlines (Google Sheets)</title>
 <style>
 
+/* ============================================================
+   SETUP — do this once
+   ------------------------------------------------------------
+   1. Make a Google Sheet with these column headers in row 1:
+
+      type | a | b | c | d | e
+
+      Fill rows below like this, depending on "type":
+
+      score     | away team | away score | home team | home score | innings (optional)
+      headline  | flag text | message    |           |            |
+
+      Example rows:
+      score    | Rockets | 4 | Bandits | 7
+      score    | Hornets | 9 | Wildcats | 3 | 11
+      headline | NEWS | Week 12 games rescheduled to Thursday
+      headline |      | Good luck this weekend, Sandlot League!
+
+      The winning team is highlighted automatically based on
+      whichever score is higher — no need for a winner column.
+      Tied scores get no highlight.
+
+      Leave the innings column (e) blank for a normal 9-inning
+      game. Fill it in only when the game ended early or went
+      extra innings (e.g. 7, 10, 11) — it'll show as "F/10"
+      next to the score. Leaving it blank or entering 9 shows
+      nothing extra.
+
+   2. In Google Sheets: File -> Share -> Publish to web.
+      Choose the correct sheet tab, choose "Comma-separated
+      values (.csv)" as the format, click Publish.
+      Copy the URL it gives you.
+
+   3. Paste that URL into SHEET_CSV_URL below (search for it
+      further down in this file, inside the <script> tag).
+
+   4. In OBS: Sources -> + -> Browser Source -> Local File ->
+      pick this .html file. Width 1920, height ~110.
+      Turn "Shutdown source when not visible" OFF.
+
+   Whenever someone edits the Google Sheet, the ticker will
+   pick up the changes automatically within REFRESH_SECONDS
+   (default 60s) — no need to touch OBS or this file again.
+   ============================================================ */
+
 @import url('https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Baloo+2:wght@600;700&display=swap');
 
 :root{
@@ -144,29 +189,13 @@ html, body{
 
 .score-box{
   flex: 0 0 auto;
-  width: 560px;
+  width: 340px;
   height: 100%;
   position: relative;
   overflow: hidden;
   background: var(--navy);
   border-right: 4px solid var(--gold);
   z-index: 2;
-}
-
-.score-box .item{
-  padding: 0 26px;
-}
-.score-box .team{
-  font-size: 27px;
-}
-.score-box .score{
-  font-size: 44px;
-}
-.score-box .at{
-  font-size: 24px;
-}
-.score-box .final-tag{
-  font-size: 19px;
 }
 
 .score-slide{
@@ -177,6 +206,14 @@ html, body{
   align-items: center;
   justify-content: center;
   padding: 0 22px;
+  box-sizing: border-box;
+}
+
+.score-fit{
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  transform-origin: center center;
 }
 
 @keyframes score-enter{
@@ -324,6 +361,20 @@ let scoreItems = [];
 let scoreIndex = 0;
 let scoreTimer = null;
 
+function fitScoreContent(){
+  const fit = scoreSlide.querySelector(".score-fit");
+  if(!fit) return;
+  fit.style.transform = "scale(1)";
+  const availableW = scoreSlide.clientWidth - 44;  // minus left/right padding
+  const availableH = scoreSlide.clientHeight;
+  const neededW = fit.scrollWidth;
+  const neededH = fit.scrollHeight;
+  if(neededW === 0 || neededH === 0) return;
+  let scale = Math.min(availableW / neededW, availableH / neededH);
+  scale = Math.max(0.4, Math.min(scale, 1.3)); // keep it within a sane range
+  fit.style.transform = `scale(${scale})`;
+}
+
 function showScore(index){
   if(!scoreItems.length){
     scoreBox.style.display = "none";
@@ -331,9 +382,10 @@ function showScore(index){
   }
   scoreBox.style.display = "block";
   scoreSlide.classList.remove("enter");
-  scoreSlide.innerHTML = renderScoreInner(scoreItems[index]);
+  scoreSlide.innerHTML = `<div class="score-fit">${renderScoreInner(scoreItems[index])}</div>`;
   void scoreSlide.offsetWidth; // force reflow so the animation replays
   scoreSlide.classList.add("enter");
+  requestAnimationFrame(fitScoreContent);
 }
 
 function startScoreCycle(items){
@@ -382,6 +434,7 @@ async function loadFromSheet(){
 
 loadFromSheet();
 setInterval(loadFromSheet, REFRESH_SECONDS * 1000);
+window.addEventListener("resize", fitScoreContent);
 
 </script>
 </body>
