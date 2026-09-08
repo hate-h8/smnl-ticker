@@ -2,8 +2,49 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>SMNL League Ticker — Scores & Headlines </title>
+<title>SMB4 League Ticker — Scores & Headlines (Google Sheets)</title>
 <style>
+
+/* ============================================================
+   SETUP — do this once
+   ------------------------------------------------------------
+   Scores now come straight from SMNL's own database (Supabase),
+   automatically, across all three leagues. You don't manage
+   scores by hand anymore. Headlines still come from a Google
+   Sheet you control.
+
+   1. HEADLINES SHEET
+      Make a Google Sheet with these column headers in row 1:
+
+         type | a | b
+
+      Only "headline" rows matter now:
+
+         headline | flag text | message
+
+      Example rows:
+         headline | NEWS | Week 12 games rescheduled to Thursday
+         headline |      | Good luck this weekend, Sandlot League!
+
+      In Google Sheets: File -> Share -> Publish to web ->
+      choose the right tab -> format "Comma-separated values
+      (.csv)" -> Publish. Paste that URL into SHEET_CSV_URL
+      below.
+
+   2. SCORES (already wired up, nothing to publish)
+      Scores are fetched directly from SMNL's Supabase API for
+      all three leagues (Pro, All-Star, Legendary), filtered to
+      finished games, most recent first. If SMNL ever changes
+      their season IDs or database, update SUPABASE_URL,
+      SUPABASE_ANON_KEY, or the LEAGUES list below.
+
+   3. In OBS: Sources -> + -> Browser Source -> Local File ->
+      pick this .html file. Width 1920, height ~110.
+      Turn "Shutdown source when not visible" OFF.
+
+   Both sources refresh automatically every REFRESH_SECONDS
+   (default 60s) — no need to touch OBS or this file again.
+   ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Baloo+2:wght@600;700&display=swap');
 
@@ -142,6 +183,18 @@ html, body{
   letter-spacing: .5px;
 }
 
+.item .league-badge{
+  font-family: 'Teko', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--gold);
+  border: 1.5px solid var(--gold);
+  padding: 2px 7px 0;
+  border-radius: 4px;
+  margin-right: 14px;
+  letter-spacing: 1px;
+}
+
 .score-box{
   flex: 0 0 auto;
   width: 340px;
@@ -194,8 +247,8 @@ html, body{
 
 <div class="ticker-bar">
   <div class="league-tag">
-    <div class="name">SMNL</div>
-    <div class="sub">https://smnl-web.vercel.app/</div>
+    <div class="name">SANDLOT LEAGUE</div>
+    <div class="sub">SMB4 &middot; DISCORD</div>
   </div>
   <div class="score-box" id="scoreBox">
     <div class="score-slide" id="scoreSlide"></div>
@@ -208,22 +261,37 @@ html, body{
 <script>
 
 // ============================================================
-// PASTE YOUR PUBLISHED GOOGLE SHEET CSV URL BELOW
+// PASTE YOUR PUBLISHED GOOGLE SHEET CSV URL BELOW (headlines only)
 // (File -> Share -> Publish to web -> CSV, in Google Sheets)
 // ============================================================
 const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSP59wDgCakUu1rGQMs2OaOXyGOqM-z0Hgp1MDbSMxoKswawRwByrmK2E4GwX_Y9hNQl5Tmw3IDmiWo/pub?gid=0&single=true&output=csv";
 
-// How often to re-check the sheet for updates, in seconds.
+// ============================================================
+// SMNL Supabase config (scores) — from the API request found in
+// DevTools. Update these only if SMNL changes their database.
+// ============================================================
+const SUPABASE_URL = "https://hhjmginyyvcrngvcnhdb.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_JSBxFG27P4j44Ou1ivP3gw_oSBm-AVs";
+const LEAGUES = [
+  { seasonId: 5, label: "PRO" },
+  { seasonId: 6, label: "ALL-STAR" },
+  { seasonId: 7, label: "LEGENDARY" },
+];
+
+// How many finished games to pull per league, most recent first.
+const GAMES_PER_LEAGUE = 8;
+
+// How often to re-check both sources for updates, in seconds.
 const REFRESH_SECONDS = 60;
 
-// How fast the ticker scrolls. Higher number = slower.
+// How fast the headline ticker scrolls. Higher number = slower.
 const SCROLL_SECONDS = 45;
 
 // How many seconds each score is shown before flipping to the next.
-const SCORE_INTERVAL_SECONDS = 15;
+const SCORE_INTERVAL_SECONDS = 10;
 
 // Shown while nothing has loaded yet / if the sheet is unreachable.
-const FALLBACK_ITEMS = [
+const FALLBACK_HEADLINES = [
   { type: "headline", flag: "SETUP", text: "Paste your Google Sheet CSV link into SHEET_CSV_URL in this file" },
 ];
 
@@ -253,42 +321,83 @@ function parseCSV(text){
   return rows.filter(r => r.some(f => f.trim() !== ""));
 }
 
-function rowsToItems(rows){
+function rowsToHeadlines(rows){
   if(!rows.length) return [];
   const header = rows[0].map(h => h.trim().toLowerCase());
   const idx = name => header.indexOf(name);
-  const iType = idx("type"), iA = idx("a"), iB = idx("b"), iC = idx("c"), iD = idx("d"), iE = idx("e");
+  const iType = idx("type"), iA = idx("a"), iB = idx("b");
 
   return rows.slice(1).map(r => {
     const type = (r[iType] || "").trim().toLowerCase();
-    if(type === "score"){
-      return {
-        type: "score",
-        away: r[iA], awayScore: r[iB],
-        home: r[iC], homeScore: r[iD],
-        innings: (r[iE] || "").trim()
-      };
-    }
-    if(type === "headline"){
-      return { type: "headline", flag: r[iA], text: r[iB] };
-    }
-    return null;
+    if(type !== "headline") return null;
+    return { type: "headline", flag: r[iA], text: r[iB] };
   }).filter(Boolean);
+}
+
+// ------------------------------------------------------------
+// Supabase — fetch finished games for one league.
+// ------------------------------------------------------------
+async function fetchLeagueScores(league){
+  const params = new URLSearchParams({
+    select: "week,game_number,status,innings,home_team:teams!home_team_id(name),away_team:teams!away_team_id(name),lines:game_team_stats(is_home,runs)",
+    season_id: `eq.${league.seasonId}`,
+    status: "eq.final",
+    order: "week.desc,game_number.desc",
+    limit: String(GAMES_PER_LEAGUE),
+  });
+  const url = `${SUPABASE_URL}/rest/v1/games?${params.toString()}`;
+  const res = await fetch(url, {
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+  });
+  if(!res.ok) throw new Error(`Supabase request failed: ${res.status}`);
+  const games = await res.json();
+
+  return games.map(g => {
+    const homeLine = g.lines.find(l => l.is_home);
+    const awayLine = g.lines.find(l => !l.is_home);
+    return {
+      type: "score",
+      league: league.label,
+      week: g.week,
+      gameNumber: g.game_number,
+      away: g.away_team ? g.away_team.name : "Away",
+      awayScore: awayLine ? awayLine.runs : null,
+      home: g.home_team ? g.home_team.name : "Home",
+      homeScore: homeLine ? homeLine.runs : null,
+      innings: g.innings,
+    };
+  }).filter(it => it.awayScore !== null && it.homeScore !== null);
+}
+
+async function fetchAllScores(){
+  const results = await Promise.allSettled(LEAGUES.map(fetchLeagueScores));
+  const scores = [];
+  results.forEach(r => {
+    if(r.status === "fulfilled") scores.push(...r.value);
+    else console.error("Failed to load scores for a league:", r.reason);
+  });
+  // Roughly chronological across leagues since all run the same weeks.
+  scores.sort((a, b) => (b.week - a.week) || (b.gameNumber - a.gameNumber));
+  return scores;
 }
 
 // ------------------------------------------------------------
 // Rendering
 // ------------------------------------------------------------
 function renderScoreInner(it){
-  const a = parseFloat(it.awayScore);
-  const h = parseFloat(it.homeScore);
-  const awayWin = !isNaN(a) && !isNaN(h) && a > h;
-  const homeWin = !isNaN(a) && !isNaN(h) && h > a;
-  const innings = parseInt(it.innings, 10);
-  const showFinalTag = !isNaN(innings) && innings !== 9;
-  const finalTag = showFinalTag ? `<span class="final-tag">F/${innings}</span>` : "";
+  const a = it.awayScore;
+  const h = it.homeScore;
+  const awayWin = a > h;
+  const homeWin = h > a;
+  const showFinalTag = it.innings && it.innings !== 9;
+  const finalTag = showFinalTag ? `<span class="final-tag">F/${it.innings}</span>` : "";
+  const leagueBadge = it.league ? `<span class="league-badge">${it.league}</span>` : "";
   return `
     <div class="item">
+      ${leagueBadge}
       <span class="team ${awayWin ? "win" : ""}">${it.away}</span>
       <span class="score">${it.awayScore}</span>
       <span class="at">@</span>
@@ -357,38 +466,38 @@ function startScoreCycle(items){
 }
 
 function renderHeadlines(items){
-  if(!items.length) items = FALLBACK_ITEMS;
+  if(!items.length) items = FALLBACK_HEADLINES;
   let html = "";
   items.forEach(it => { html += renderHeadlineInner(it) + `<div class="divider"></div>`; });
   track.innerHTML = html + html; // duplicate for seamless infinite scroll
 }
 
-function renderAll(items){
-  const scores = items.filter(it => it.type === "score");
-  const headlines = items.filter(it => it.type === "headline");
-  startScoreCycle(scores);
-  renderHeadlines(headlines);
-}
-
-async function loadFromSheet(){
+async function loadHeadlines(){
   if(!SHEET_CSV_URL || SHEET_CSV_URL.indexOf("PASTE_YOUR") !== -1){
-    renderAll(FALLBACK_ITEMS);
-    return;
+    return FALLBACK_HEADLINES;
   }
   try{
     const res = await fetch(SHEET_CSV_URL + (SHEET_CSV_URL.includes("?") ? "&" : "?") + "_ts=" + Date.now());
     const text = await res.text();
     const rows = parseCSV(text);
-    const items = rowsToItems(rows);
-    renderAll(items);
+    return rowsToHeadlines(rows);
   } catch(err){
-    console.error("Failed to load sheet:", err);
-    renderAll(FALLBACK_ITEMS);
+    console.error("Failed to load headline sheet:", err);
+    return FALLBACK_HEADLINES;
   }
 }
 
-loadFromSheet();
-setInterval(loadFromSheet, REFRESH_SECONDS * 1000);
+async function loadAll(){
+  const [headlines, scores] = await Promise.all([
+    loadHeadlines(),
+    fetchAllScores().catch(err => { console.error("Failed to load scores:", err); return []; }),
+  ]);
+  renderHeadlines(headlines);
+  startScoreCycle(scores);
+}
+
+loadAll();
+setInterval(loadAll, REFRESH_SECONDS * 1000);
 window.addEventListener("resize", fitScoreContent);
 
 </script>
