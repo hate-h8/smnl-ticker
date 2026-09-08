@@ -187,23 +187,43 @@ html, body{
   letter-spacing: .5px;
 }
 
-.seam{
+.score-box{
   flex: 0 0 auto;
-  width: 26px;
-  height: 26px;
-  margin: 0 22px;
+  width: 360px;
+  height: 100%;
   position: relative;
+  overflow: hidden;
+  background: var(--navy);
+  border-right: 4px solid var(--gold);
+  z-index: 2;
 }
-.seam::before, .seam::after{
-  content: "";
+
+.score-slide{
   position: absolute;
-  width: 26px; height: 2px;
-  background: var(--red);
-  top: 12px; left: 0;
-  border-radius: 2px;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 22px;
 }
-.seam::before{ transform: rotate(20deg); }
-.seam::after{ transform: rotate(-20deg); }
+
+@keyframes score-enter{
+  from{ transform: translateY(100%); opacity: 0; }
+  to{ transform: translateY(0); opacity: 1; }
+}
+
+.score-slide.enter{
+  animation: score-enter .55s cubic-bezier(.2,.8,.3,1);
+}
+
+.divider{
+  flex: 0 0 auto;
+  width: 2px;
+  height: 34px;
+  margin: 0 26px;
+  background: rgba(244,239,225,.25);
+}
 
 </style>
 </head>
@@ -211,8 +231,11 @@ html, body{
 
 <div class="ticker-bar">
   <div class="league-tag">
-    <div class="name">LEGENDARY LEAGUE</div>
+    <div class="name">SANDLOT LEAGUE</div>
     <div class="sub">SMB4 &middot; DISCORD</div>
+  </div>
+  <div class="score-box" id="scoreBox">
+    <div class="score-slide" id="scoreSlide"></div>
   </div>
   <div class="track-wrap">
     <div class="track" id="track"></div>
@@ -233,9 +256,12 @@ const REFRESH_SECONDS = 60;
 // How fast the ticker scrolls. Higher number = slower.
 const SCROLL_SECONDS = 45;
 
+// How many seconds each score is shown before flipping to the next.
+const SCORE_INTERVAL_SECONDS = 5;
+
 // Shown while nothing has loaded yet / if the sheet is unreachable.
 const FALLBACK_ITEMS = [
-  { type: "headline", flag: "SETUP", text: "CSV File Is not working" },
+  { type: "headline", flag: "SETUP", text: "Paste your Google Sheet CSV link into SHEET_CSV_URL in this file" },
 ];
 
 // ------------------------------------------------------------
@@ -290,25 +316,26 @@ function rowsToItems(rows){
 // ------------------------------------------------------------
 // Rendering
 // ------------------------------------------------------------
-function renderItem(it){
-  if(it.type === "score"){
-    const a = parseFloat(it.awayScore);
-    const h = parseFloat(it.homeScore);
-    const awayWin = !isNaN(a) && !isNaN(h) && a > h;
-    const homeWin = !isNaN(a) && !isNaN(h) && h > a;
-    const innings = parseInt(it.innings, 10);
-    const showFinalTag = !isNaN(innings) && innings !== 9;
-    const finalTag = showFinalTag ? `<span class="final-tag">F/${innings}</span>` : "";
-    return `
-      <div class="item">
-        <span class="team ${awayWin ? "win" : ""}">${it.away}</span>
-        <span class="score">${it.awayScore}</span>
-        <span class="at">@</span>
-        <span class="score">${it.homeScore}</span>
-        <span class="team ${homeWin ? "win" : ""}">${it.home}</span>
-        ${finalTag}
-      </div>`;
-  }
+function renderScoreInner(it){
+  const a = parseFloat(it.awayScore);
+  const h = parseFloat(it.homeScore);
+  const awayWin = !isNaN(a) && !isNaN(h) && a > h;
+  const homeWin = !isNaN(a) && !isNaN(h) && h > a;
+  const innings = parseInt(it.innings, 10);
+  const showFinalTag = !isNaN(innings) && innings !== 9;
+  const finalTag = showFinalTag ? `<span class="final-tag">F/${innings}</span>` : "";
+  return `
+    <div class="item">
+      <span class="team ${awayWin ? "win" : ""}">${it.away}</span>
+      <span class="score">${it.awayScore}</span>
+      <span class="at">@</span>
+      <span class="score">${it.homeScore}</span>
+      <span class="team ${homeWin ? "win" : ""}">${it.home}</span>
+      ${finalTag}
+    </div>`;
+}
+
+function renderHeadlineInner(it){
   return `
     <div class="item">
       <span class="headline">
@@ -317,21 +344,57 @@ function renderItem(it){
     </div>`;
 }
 
-function seam(){ return `<div class="seam"></div>`; }
-
+const scoreBox = document.getElementById("scoreBox");
+const scoreSlide = document.getElementById("scoreSlide");
 const track = document.getElementById("track");
 document.documentElement.style.setProperty("--duration", SCROLL_SECONDS + "s");
 
-function renderItems(items){
+let scoreItems = [];
+let scoreIndex = 0;
+let scoreTimer = null;
+
+function showScore(index){
+  if(!scoreItems.length){
+    scoreBox.style.display = "none";
+    return;
+  }
+  scoreBox.style.display = "block";
+  scoreSlide.classList.remove("enter");
+  scoreSlide.innerHTML = renderScoreInner(scoreItems[index]);
+  void scoreSlide.offsetWidth; // force reflow so the animation replays
+  scoreSlide.classList.add("enter");
+}
+
+function startScoreCycle(items){
+  scoreItems = items;
+  scoreIndex = 0;
+  if(scoreTimer) clearInterval(scoreTimer);
+  showScore(scoreIndex);
+  if(scoreItems.length > 1){
+    scoreTimer = setInterval(() => {
+      scoreIndex = (scoreIndex + 1) % scoreItems.length;
+      showScore(scoreIndex);
+    }, SCORE_INTERVAL_SECONDS * 1000);
+  }
+}
+
+function renderHeadlines(items){
   if(!items.length) items = FALLBACK_ITEMS;
   let html = "";
-  items.forEach(it => { html += renderItem(it) + seam(); });
+  items.forEach(it => { html += renderHeadlineInner(it) + `<div class="divider"></div>`; });
   track.innerHTML = html + html; // duplicate for seamless infinite scroll
+}
+
+function renderAll(items){
+  const scores = items.filter(it => it.type === "score");
+  const headlines = items.filter(it => it.type === "headline");
+  startScoreCycle(scores);
+  renderHeadlines(headlines);
 }
 
 async function loadFromSheet(){
   if(!SHEET_CSV_URL || SHEET_CSV_URL.indexOf("PASTE_YOUR") !== -1){
-    renderItems(FALLBACK_ITEMS);
+    renderAll(FALLBACK_ITEMS);
     return;
   }
   try{
@@ -339,10 +402,10 @@ async function loadFromSheet(){
     const text = await res.text();
     const rows = parseCSV(text);
     const items = rowsToItems(rows);
-    renderItems(items);
+    renderAll(items);
   } catch(err){
     console.error("Failed to load sheet:", err);
-    renderItems(FALLBACK_ITEMS);
+    renderAll(FALLBACK_ITEMS);
   }
 }
 
