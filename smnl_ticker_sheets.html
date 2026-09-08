@@ -5,47 +5,6 @@
 <title>SMB4 League Ticker — Scores & Headlines (Google Sheets)</title>
 <style>
 
-/* ============================================================
-   SETUP — do this once
-   ------------------------------------------------------------
-   Scores now come straight from SMNL's own database (Supabase),
-   automatically, across all three leagues. You don't manage
-   scores by hand anymore. Headlines still come from a Google
-   Sheet you control.
-
-   1. HEADLINES SHEET
-      Make a Google Sheet with these column headers in row 1:
-
-         type | a | b
-
-      Only "headline" rows matter now:
-
-         headline | flag text | message
-
-      Example rows:
-         headline | NEWS | Week 12 games rescheduled to Thursday
-         headline |      | Good luck this weekend, Sandlot League!
-
-      In Google Sheets: File -> Share -> Publish to web ->
-      choose the right tab -> format "Comma-separated values
-      (.csv)" -> Publish. Paste that URL into SHEET_CSV_URL
-      below.
-
-   2. SCORES (already wired up, nothing to publish)
-      Scores are fetched directly from SMNL's Supabase API for
-      all three leagues (Pro, All-Star, Legendary), filtered to
-      finished games, most recent first. If SMNL ever changes
-      their season IDs or database, update SUPABASE_URL,
-      SUPABASE_ANON_KEY, or the LEAGUES list below.
-
-   3. In OBS: Sources -> + -> Browser Source -> Local File ->
-      pick this .html file. Width 1920, height ~110.
-      Turn "Shutdown source when not visible" OFF.
-
-   Both sources refresh automatically every REFRESH_SECONDS
-   (default 60s) — no need to touch OBS or this file again.
-   ============================================================ */
-
 @import url('https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Baloo+2:wght@600;700&display=swap');
 
 :root{
