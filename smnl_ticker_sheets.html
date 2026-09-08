@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SMB4 League Ticker (Google Sheets)</title>
+<style>
+
+/* ============================================================
+   SETUP — do this once
+   ------------------------------------------------------------
+   1. Make a Google Sheet with these column headers in row 1:
+
+      type | a | b | c | d | e
+
+      Fill rows below like this, depending on "type":
+
+      score     | away team | away score | home team | home score | winner (home/away, or blank)
+      standing  | rank      | team name  | record    |            |
+      headline  | flag text | message    |           |            |
+
+      Example rows:
+      score    | Rockets | 4 | Bandits | 7 | home
+      score    | Hornets | 9 | Wildcats | 3 | away
+      standing | 1 | Bandits | 18-6 |
+      headline | STANDINGS | Bandits climb to #1 seed with 3 straight wins
+
+   2. In Google Sheets: File -> Share -> Publish to web.
+      Choose the correct sheet tab, choose "Comma-separated
+      values (.csv)" as the format, click Publish.
+      Copy the URL it gives you.
+
+   3. Paste that URL into SHEET_CSV_URL below (search for it
+      further down in this file, inside the <script> tag).
+
+   4. In OBS: Sources -> + -> Browser Source -> Local File ->
+      pick this .html file. Width 1920, height ~110.
+      Turn "Shutdown source when not visible" OFF.
+
+   Whenever someone edits the Google Sheet, the ticker will
+   pick up the changes automatically within REFRESH_SECONDS
+   (default 60s) — no need to touch OBS or this file again.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Baloo+2:wght@600;700&display=swap');
+
+:root{
+  --field: #173D2E;
+  --field-dark: #102A20;
+  --chalk: #F4EFE1;
+  --navy: #12233B;
+  --gold: #F2B33D;
+  --red: #C9432F;
+}
+
+html, body{
+  margin:0; padding:0;
+  background: transparent;
+  overflow: hidden;
+  width: 100vw; height: 100vh;
+}
+
+.ticker-bar{
+  position: relative;
+  width: 100%;
+  height: 92px;
+  background: linear-gradient(180deg, var(--field) 0%, var(--field-dark) 100%);
+  border-top: 4px solid var(--gold);
+  border-bottom: 4px solid var(--gold);
+  display: flex;
+  align-items: center;
+  box-shadow: 0 4px 18px rgba(0,0,0,.35);
+}
+
+.league-tag{
+  flex: 0 0 auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 0 28px;
+  background: var(--navy);
+  border-right: 4px solid var(--gold);
+  z-index: 2;
+}
+.league-tag .name{
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--chalk);
+  letter-spacing: .5px;
+  white-space: nowrap;
+}
+.league-tag .sub{
+  font-family: 'Teko', sans-serif;
+  font-weight: 500;
+  font-size: 15px;
+  color: var(--gold);
+  letter-spacing: 2px;
+  white-space: nowrap;
+  margin-top: -2px;
+}
+
+.track-wrap{
+  flex: 1 1 auto;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.track{
+  display: flex;
+  align-items: center;
+  height: 100%;
+  width: max-content;
+  animation: scroll-left var(--duration, 45s) linear infinite;
+}
+
+@keyframes scroll-left{
+  from{ transform: translateX(0); }
+  to{ transform: translateX(-50%); }
+}
+
+.item{
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 34px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.item .team{
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 700;
+  font-size: 21px;
+  color: var(--chalk);
+}
+.item .team.win{ color: var(--gold); }
+
+.item .score{
+  font-family: 'Teko', sans-serif;
+  font-weight: 600;
+  font-size: 34px;
+  color: var(--chalk);
+  margin: 0 6px;
+  line-height: 1;
+}
+
+.item .at{
+  font-family: 'Teko', sans-serif;
+  font-size: 20px;
+  color: rgba(244,239,225,.55);
+  margin: 0 10px;
+}
+
+.item .headline{
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 600;
+  font-size: 19px;
+  color: var(--chalk);
+}
+.item .headline .flag{
+  color: var(--gold);
+  font-weight: 700;
+  margin-right: 10px;
+}
+
+.seam{
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  margin: 0 22px;
+  position: relative;
+}
+.seam::before, .seam::after{
+  content: "";
+  position: absolute;
+  width: 26px; height: 2px;
+  background: var(--red);
+  top: 12px; left: 0;
+  border-radius: 2px;
+}
+.seam::before{ transform: rotate(20deg); }
+.seam::after{ transform: rotate(-20deg); }
+
+</style>
+</head>
+<body>
+
+<div class="ticker-bar">
+  <div class="league-tag">
+    <div class="name">SANDLOT LEAGUE</div>
+    <div class="sub">SMB4 &middot; DISCORD</div>
+  </div>
+  <div class="track-wrap">
+    <div class="track" id="track"></div>
+  </div>
+</div>
+
+<script>
+
+// ============================================================
+// PASTE YOUR PUBLISHED GOOGLE SHEET CSV URL BELOW
+// (File -> Share -> Publish to web -> CSV, in Google Sheets)
+// ============================================================
+const SHEET_CSV_URL = "PASTE_YOUR_PUBLISHED_CSV_LINK_HERE";
+
+// How often to re-check the sheet for updates, in seconds.
+const REFRESH_SECONDS = 60;
+
+// How fast the ticker scrolls. Higher number = slower.
+const SCROLL_SECONDS = 45;
+
+// Shown while nothing has loaded yet / if the sheet is unreachable.
+const FALLBACK_ITEMS = [
+  { type: "headline", flag: "SETUP", text: "Paste your Google Sheet CSV link into SHEET_CSV_URL in this file" },
+];
+
+// ------------------------------------------------------------
+// CSV parsing — handles quoted fields containing commas.
+// ------------------------------------------------------------
+function parseCSV(text){
+  const rows = [];
+  let row = [], field = "", inQuotes = false;
+  for(let i=0; i<text.length; i++){
+    const c = text[i], next = text[i+1];
+    if(inQuotes){
+      if(c === '"' && next === '"'){ field += '"'; i++; }
+      else if(c === '"'){ inQuotes = false; }
+      else{ field += c; }
+    } else {
+      if(c === '"'){ inQuotes = true; }
+      else if(c === ','){ row.push(field); field = ""; }
+      else if(c === '\n' || c === '\r'){
+        if(c === '\r' && next === '\n') i++;
+        row.push(field); field = "";
+        rows.push(row); row = [];
+      } else { field += c; }
+    }
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(f => f.trim() !== ""));
+}
+
+function rowsToItems(rows){
+  if(!rows.length) return [];
+  const header = rows[0].map(h => h.trim().toLowerCase());
+  const idx = name => header.indexOf(name);
+  const iType = idx("type"), iA = idx("a"), iB = idx("b"), iC = idx("c"), iD = idx("d"), iE = idx("e");
+
+  return rows.slice(1).map(r => {
+    const type = (r[iType] || "").trim().toLowerCase();
+    if(type === "score"){
+      return {
+        type: "score",
+        away: r[iA], awayScore: r[iB],
+        home: r[iC], homeScore: r[iD],
+        winner: (r[iE] || "").trim().toLowerCase()
+      };
+    }
+    if(type === "standing"){
+      return { type: "standing", rank: r[iA], team: r[iB], record: r[iC] };
+    }
+    if(type === "headline"){
+      return { type: "headline", flag: r[iA], text: r[iB] };
+    }
+    return null;
+  }).filter(Boolean);
+}
+
+// ------------------------------------------------------------
+// Rendering
+// ------------------------------------------------------------
+function renderItem(it){
+  if(it.type === "score"){
+    const awayWin = it.winner === "away";
+    const homeWin = it.winner === "home";
+    return `
+      <div class="item">
+        <span class="team ${awayWin ? "win" : ""}">${it.away}</span>
+        <span class="score">${it.awayScore}</span>
+        <span class="at">@</span>
+        <span class="score">${it.homeScore}</span>
+        <span class="team ${homeWin ? "win" : ""}">${it.home}</span>
+      </div>`;
+  }
+  if(it.type === "standing"){
+    return `
+      <div class="item">
+        <span class="score" style="font-size:26px;color:var(--gold);">#${it.rank}</span>
+        <span class="team">${it.team}</span>
+        <span class="at">${it.record}</span>
+      </div>`;
+  }
+  return `
+    <div class="item">
+      <span class="headline">
+        ${it.flag ? `<span class="flag">${it.flag}</span>` : ""}${it.text}
+      </span>
+    </div>`;
+}
+
+function seam(){ return `<div class="seam"></div>`; }
+
+const track = document.getElementById("track");
+document.documentElement.style.setProperty("--duration", SCROLL_SECONDS + "s");
+
+function renderItems(items){
+  if(!items.length) items = FALLBACK_ITEMS;
+  let html = "";
+  items.forEach(it => { html += renderItem(it) + seam(); });
+  track.innerHTML = html + html; // duplicate for seamless infinite scroll
+}
+
+async function loadFromSheet(){
+  if(!SHEET_CSV_URL || SHEET_CSV_URL.indexOf("PASTE_YOUR") !== -1){
+    renderItems(FALLBACK_ITEMS);
+    return;
+  }
+  try{
+    const res = await fetch(SHEET_CSV_URL + (SHEET_CSV_URL.includes("?") ? "&" : "?") + "_ts=" + Date.now());
+    const text = await res.text();
+    const rows = parseCSV(text);
+    const items = rowsToItems(rows);
+    renderItems(items);
+  } catch(err){
+    console.error("Failed to load sheet:", err);
+    renderItems(FALLBACK_ITEMS);
+  }
+}
+
+loadFromSheet();
+setInterval(loadFromSheet, REFRESH_SECONDS * 1000);
+
+</script>
+</body>
+</html>
