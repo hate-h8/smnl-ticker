@@ -2,53 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>SMB4 League Ticker — Scores & Headlines (Google Sheets)</title>
+<title>SMNL League Ticker — Scores & Headlines </title>
 <style>
-
-/* ============================================================
-   SETUP — do this once
-   ------------------------------------------------------------
-   1. Make a Google Sheet with these column headers in row 1:
-
-      type | a | b | c | d | e
-
-      Fill rows below like this, depending on "type":
-
-      score     | away team | away score | home team | home score | innings (optional)
-      headline  | flag text | message    |           |            |
-
-      Example rows:
-      score    | Rockets | 4 | Bandits | 7
-      score    | Hornets | 9 | Wildcats | 3 | 11
-      headline | NEWS | Week 12 games rescheduled to Thursday
-      headline |      | Good luck this weekend, Sandlot League!
-
-      The winning team is highlighted automatically based on
-      whichever score is higher — no need for a winner column.
-      Tied scores get no highlight.
-
-      Leave the innings column (e) blank for a normal 9-inning
-      game. Fill it in only when the game ended early or went
-      extra innings (e.g. 7, 10, 11) — it'll show as "F/10"
-      next to the score. Leaving it blank or entering 9 shows
-      nothing extra.
-
-   2. In Google Sheets: File -> Share -> Publish to web.
-      Choose the correct sheet tab, choose "Comma-separated
-      values (.csv)" as the format, click Publish.
-      Copy the URL it gives you.
-
-   3. Paste that URL into SHEET_CSV_URL below (search for it
-      further down in this file, inside the <script> tag).
-
-   4. In OBS: Sources -> + -> Browser Source -> Local File ->
-      pick this .html file. Width 1920, height ~110.
-      Turn "Shutdown source when not visible" OFF.
-
-   Whenever someone edits the Google Sheet, the ticker will
-   pick up the changes automatically within REFRESH_SECONDS
-   (default 60s) — no need to touch OBS or this file again.
-   ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Baloo+2:wght@600;700&display=swap');
 
@@ -239,8 +194,8 @@ html, body{
 
 <div class="ticker-bar">
   <div class="league-tag">
-    <div class="name">SANDLOT LEAGUE</div>
-    <div class="sub">SMB4 &middot; DISCORD</div>
+    <div class="name">SMNL</div>
+    <div class="sub">SMB4 &middot; https://discord.gg/95dUAZeVF </div>
   </div>
   <div class="score-box" id="scoreBox">
     <div class="score-slide" id="scoreSlide"></div>
@@ -265,7 +220,7 @@ const REFRESH_SECONDS = 60;
 const SCROLL_SECONDS = 45;
 
 // How many seconds each score is shown before flipping to the next.
-const SCORE_INTERVAL_SECONDS = 10;
+const SCORE_INTERVAL_SECONDS = 15;
 
 // Shown while nothing has loaded yet / if the sheet is unreachable.
 const FALLBACK_ITEMS = [
