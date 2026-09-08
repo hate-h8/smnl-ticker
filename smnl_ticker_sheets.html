@@ -189,13 +189,461 @@ html, body{
 
 .score-box{
   flex: 0 0 auto;
-  width: 360px;
+  width: 560px;
   height: 100%;
   position: relative;
   overflow: hidden;
   background: var(--navy);
   border-right: 4px solid var(--gold);
   z-index: 2;
+}
+
+.score-box .item{
+  padding: 0 26px;
+}
+.score-box .team{
+  font-size: 27px;
+}
+.score-box .score{
+  font-size: 44px;
+}
+.score-box .at{
+  font-size: 24px;
+}
+.score-box .final-tag{
+  font-size: 19px;
+}
+
+.score-slide{
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 22px;
+}
+
+@keyframes score-enter{
+  from{ transform: translateY(100%); opacity: 0; }
+  to{ transform: translateY(0); opacity: 1; }
+}
+
+.score-slide.enter{
+  animation: score-enter .55s cubic-bezier(.2,.8,.3,1);
+}
+
+.divider{
+  flex: 0 0 auto;
+  width: 2px;
+  height: 34px;
+  margin: 0 26px;
+  background: rgba(244,239,225,.25);
+}
+
+</style>
+</head>
+<body>
+
+<div class="ticker-bar">
+  <div class="league-tag">
+    <div class="name">SANDLOT LEAGUE</div>
+    <div class="sub">SMB4 &middot; DISCORD</div>
+  </div>
+  <div class="score-box" id="scoreBox">
+    <div class="score-slide" id="scoreSlide"></div>
+  </div>
+  <div class="track-wrap">
+    <div class="track" id="track"></div>
+  </div>
+</div>
+
+<script>
+
+// ============================================================
+// PASTE YOUR PUBLISHED GOOGLE SHEET CSV URL BELOW
+// (File -> Share -> Publish to web -> CSV, in Google Sheets)
+// ============================================================
+const SHEET_CSV_URL = "PASTE_YOUR_PUBLISHED_CSV_LINK_HERE";
+
+// How often to re-check the sheet for updates, in seconds.
+const REFRESH_SECONDS = 60;
+
+// How fast the ticker scrolls. Higher number = slower.
+const SCROLL_SECONDS = 45;
+
+// How many seconds each score is shown before flipping to the next.
+const SCORE_INTERVAL_SECONDS = 10;
+
+// Shown while nothing has loaded yet / if the sheet is unreachable.
+const FALLBACK_ITEMS = [
+  { type: "headline", flag: "SETUP", text: "Paste your Google Sheet CSV link into SHEET_CSV_URL in this file" },
+];
+
+// ------------------------------------------------------------
+// CSV parsing — handles quoted fields containing commas.
+// ------------------------------------------------------------
+function parseCSV(text){
+  const rows = [];
+  let row = [], field = "", inQuotes = false;
+  for(let i=0; i<text.length; i++){
+    const c = text[i], next = text[i+1];
+    if(inQuotes){
+      if(c === '"' && next === '"'){ field += '"'; i++; }
+      else if(c === '"'){ inQuotes = false; }
+      else{ field += c; }
+    } else {
+      if(c === '"'){ inQuotes = true; }
+      else if(c === ','){ row.push(field); field = ""; }
+      else if(c === '\n' || c === '\r'){
+        if(c === '\r' && next === '\n') i++;
+        row.push(field); field = "";
+        rows.push(row); row = [];
+      } else { field += c; }
+    }
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(f => f.trim() !== ""));
+}
+
+function rowsToItems(rows){
+  if(!rows.length) return [];
+  const header = rows[0].map(h => h.trim().toLowerCase());
+  const idx = name => header.indexOf(name);
+  const iType = idx("type"), iA = idx("a"), iB = idx("b"), iC = idx("c"), iD = idx("d"), iE = idx("e");
+
+  return rows.slice(1).map(r => {
+    const type = (r[iType] || "").trim().toLowerCase();
+    if(type === "score"){
+      return {
+        type: "score",
+        away: r[iA], awayScore: r[iB],
+        home: r[iC], homeScore: r[iD],
+        innings: (r[iE] || "").trim()
+      };
+    }
+    if(type === "headline"){
+      return { type: "headline", flag: r[iA], text: r[iB] };
+    }
+    return null;
+  }).filter(Boolean);
+}
+
+// ------------------------------------------------------------
+// Rendering
+// ------------------------------------------------------------
+function renderScoreInner(it){
+  const a = parseFloat(it.awayScore);
+  const h = parseFloat(it.homeScore);
+  const awayWin = !isNaN(a) && !isNaN(h) && a > h;
+  const homeWin = !isNaN(a) && !isNaN(h) && h > a;
+  const innings = parseInt(it.innings, 10);
+  const showFinalTag = !isNaN(innings) && innings !== 9;
+  const finalTag = showFinalTag ? `<span class="final-tag">F/${innings}</span>` : "";
+  return `
+    <div class="item">
+      <span class="team ${awayWin ? "win" : ""}">${it.away}</span>
+      <span class="score">${it.awayScore}</span>
+      <span class="at">@</span>
+      <span class="score">${it.homeScore}</span>
+      <span class="team ${homeWin ? "win" : ""}">${it.home}</span>
+      ${finalTag}
+    </div>`;
+}
+
+function renderHeadlineInner(it){
+  return `
+    <div class="item">
+      <span class="headline">
+        ${it.flag ? `<span class="flag">${it.flag}</span>` : ""}${it.text}
+      </span>
+    </div>`;
+}
+
+const scoreBox = document.getElementById("scoreBox");
+const scoreSlide = document.getElementById("scoreSlide");
+const track = document.getElementById("track");
+document.documentElement.style.setProperty("--duration", SCROLL_SECONDS + "s");
+
+let scoreItems = [];
+let scoreIndex = 0;
+let scoreTimer = null;
+
+function showScore(index){
+  if(!scoreItems.length){
+    scoreBox.style.display = "none";
+    return;
+  }
+  scoreBox.style.display = "block";
+  scoreSlide.classList.remove("enter");
+  scoreSlide.innerHTML = renderScoreInner(scoreItems[index]);
+  void scoreSlide.offsetWidth; // force reflow so the animation replays
+  scoreSlide.classList.add("enter");
+}
+
+function startScoreCycle(items){
+  scoreItems = items;
+  scoreIndex = 0;
+  if(scoreTimer) clearInterval(scoreTimer);
+  showScore(scoreIndex);
+  if(scoreItems.length > 1){
+    scoreTimer = setInterval(() => {
+      scoreIndex = (scoreIndex + 1) % scoreItems.length;
+      showScore(scoreIndex);
+    }, SCORE_INTERVAL_SECONDS * 1000);
+  }
+}
+
+function renderHeadlines(items){
+  if(!items.length) items = FALLBACK_ITEMS;
+  let html = "";
+  items.forEach(it => { html += renderHeadlineInner(it) + `<div class="divider"></div>`; });
+  track.innerHTML = html + html; // duplicate for seamless infinite scroll
+}
+
+function renderAll(items){
+  const scores = items.filter(it => it.type === "score");
+  const headlines = items.filter(it => it.type === "headline");
+  startScoreCycle(scores);
+  renderHeadlines(headlines);
+}
+
+async function loadFromSheet(){
+  if(!SHEET_CSV_URL || SHEET_CSV_URL.indexOf("PASTE_YOUR") !== -1){
+    renderAll(FALLBACK_ITEMS);
+    return;
+  }
+  try{
+    const res = await fetch(SHEET_CSV_URL + (SHEET_CSV_URL.includes("?") ? "&" : "?") + "_ts=" + Date.now());
+    const text = await res.text();
+    const rows = parseCSV(text);
+    const items = rowsToItems(rows);
+    renderAll(items);
+  } catch(err){
+    console.error("Failed to load sheet:", err);
+    renderAll(FALLBACK_ITEMS);
+  }
+}
+
+loadFromSheet();
+setInterval(loadFromSheet, REFRESH_SECONDS * 1000);
+
+</script>
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SMB4 League Ticker — Scores & Headlines (Google Sheets)</title>
+<style>
+
+/* ============================================================
+   SETUP — do this once
+   ------------------------------------------------------------
+   1. Make a Google Sheet with these column headers in row 1:
+
+      type | a | b | c | d | e
+
+      Fill rows below like this, depending on "type":
+
+      score     | away team | away score | home team | home score | innings (optional)
+      headline  | flag text | message    |           |            |
+
+      Example rows:
+      score    | Rockets | 4 | Bandits | 7
+      score    | Hornets | 9 | Wildcats | 3 | 11
+      headline | NEWS | Week 12 games rescheduled to Thursday
+      headline |      | Good luck this weekend, Sandlot League!
+
+      The winning team is highlighted automatically based on
+      whichever score is higher — no need for a winner column.
+      Tied scores get no highlight.
+
+      Leave the innings column (e) blank for a normal 9-inning
+      game. Fill it in only when the game ended early or went
+      extra innings (e.g. 7, 10, 11) — it'll show as "F/10"
+      next to the score. Leaving it blank or entering 9 shows
+      nothing extra.
+
+   2. In Google Sheets: File -> Share -> Publish to web.
+      Choose the correct sheet tab, choose "Comma-separated
+      values (.csv)" as the format, click Publish.
+      Copy the URL it gives you.
+
+   3. Paste that URL into SHEET_CSV_URL below (search for it
+      further down in this file, inside the <script> tag).
+
+   4. In OBS: Sources -> + -> Browser Source -> Local File ->
+      pick this .html file. Width 1920, height ~110.
+      Turn "Shutdown source when not visible" OFF.
+
+   Whenever someone edits the Google Sheet, the ticker will
+   pick up the changes automatically within REFRESH_SECONDS
+   (default 60s) — no need to touch OBS or this file again.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Baloo+2:wght@600;700&display=swap');
+
+:root{
+  --field: #173D2E;
+  --field-dark: #102A20;
+  --chalk: #F4EFE1;
+  --navy: #12233B;
+  --gold: #F2B33D;
+  --red: #C9432F;
+}
+
+html, body{
+  margin:0; padding:0;
+  background: transparent;
+  overflow: hidden;
+  width: 100vw; height: 100vh;
+}
+
+.ticker-bar{
+  position: relative;
+  width: 100%;
+  height: 92px;
+  background: linear-gradient(180deg, var(--field) 0%, var(--field-dark) 100%);
+  border-top: 4px solid var(--gold);
+  border-bottom: 4px solid var(--gold);
+  display: flex;
+  align-items: center;
+  box-shadow: 0 4px 18px rgba(0,0,0,.35);
+}
+
+.league-tag{
+  flex: 0 0 auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 0 28px;
+  background: var(--navy);
+  border-right: 4px solid var(--gold);
+  z-index: 2;
+}
+.league-tag .name{
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--chalk);
+  letter-spacing: .5px;
+  white-space: nowrap;
+}
+.league-tag .sub{
+  font-family: 'Teko', sans-serif;
+  font-weight: 500;
+  font-size: 15px;
+  color: var(--gold);
+  letter-spacing: 2px;
+  white-space: nowrap;
+  margin-top: -2px;
+}
+
+.track-wrap{
+  flex: 1 1 auto;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.track{
+  display: flex;
+  align-items: center;
+  height: 100%;
+  width: max-content;
+  animation: scroll-left var(--duration, 45s) linear infinite;
+}
+
+@keyframes scroll-left{
+  from{ transform: translateX(0); }
+  to{ transform: translateX(-50%); }
+}
+
+.item{
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 34px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.item .team{
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 700;
+  font-size: 21px;
+  color: var(--chalk);
+}
+.item .team.win{ color: var(--gold); }
+
+.item .score{
+  font-family: 'Teko', sans-serif;
+  font-weight: 600;
+  font-size: 34px;
+  color: var(--chalk);
+  margin: 0 6px;
+  line-height: 1;
+}
+
+.item .at{
+  font-family: 'Teko', sans-serif;
+  font-size: 20px;
+  color: rgba(244,239,225,.55);
+  margin: 0 10px;
+}
+
+.item .headline{
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 600;
+  font-size: 19px;
+  color: var(--chalk);
+}
+.item .headline .flag{
+  color: var(--gold);
+  font-weight: 700;
+  margin-right: 10px;
+}
+
+.item .final-tag{
+  font-family: 'Teko', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--field-dark);
+  background: var(--gold);
+  padding: 3px 9px 1px;
+  border-radius: 4px;
+  margin-left: 12px;
+  letter-spacing: .5px;
+}
+
+.score-box{
+  flex: 0 0 auto;
+  width: 560px;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  background: var(--navy);
+  border-right: 4px solid var(--gold);
+  z-index: 2;
+}
+
+.score-box .item{
+  padding: 0 26px;
+}
+.score-box .team{
+  font-size: 27px;
+}
+.score-box .score{
+  font-size: 44px;
+}
+.score-box .at{
+  font-size: 24px;
+}
+.score-box .final-tag{
+  font-size: 19px;
 }
 
 .score-slide{
@@ -257,7 +705,7 @@ const REFRESH_SECONDS = 60;
 const SCROLL_SECONDS = 45;
 
 // How many seconds each score is shown before flipping to the next.
-const SCORE_INTERVAL_SECONDS = 5;
+const SCORE_INTERVAL_SECONDS = 10;
 
 // Shown while nothing has loaded yet / if the sheet is unreachable.
 const FALLBACK_ITEMS = [
