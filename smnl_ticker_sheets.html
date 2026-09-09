@@ -23,17 +23,6 @@ html, body{
   width: 100vw; height: 100vh;
 }
 
-/* ------------------------------------------------------------
-   Stage: a fixed "design canvas" the ticker is authored at,
-   now a full 1920x1080 frame. The ticker bar sits docked to
-   the bottom; everything above it is a solid chroma-key green
-   so you can add a Chroma Key filter on this source in OBS and
-   only the ticker survives, letting you layer it over anything.
-   JS measures the real pixel box OBS gives this page (whatever
-   Width/Height you set on the Browser Source) and scales this
-   whole canvas uniformly to fit it. Set the source to exactly
-   1920x1080 to match your stream canvas 1:1.
-   ------------------------------------------------------------ */
 .stage{
   position: absolute;
   top: 0;
@@ -244,13 +233,6 @@ html, body{
   background: rgba(244,239,225,.25);
 }
 
-/* ------------------------------------------------------------
-   Settings panel. Lives OUTSIDE .stage on purpose, so it is
-   never affected by the ticker's scale transform - it always
-   fills the real, actual pixel viewport OBS gives this page
-   (now a full 1920x1080 frame, so there's plenty of room).
-   Toggled in-page via Shift+E; edits apply live.
-   ------------------------------------------------------------ */
 .settings-overlay{
   position: fixed;
   inset: 0;
@@ -373,12 +355,6 @@ textarea.import-export{
 
 <script>
 
-// ============================================================
-// DEFAULTS — used the first time the ticker loads in a fresh
-// OBS source, or if someone hits "Reset to defaults" in the
-// settings panel (Shift+E). After that, everything is edited
-// and saved through the panel itself.
-// ============================================================
 const THEME_META = [
   { key: "--field",      label: "Headlines background (top)" },
   { key: "--field-dark", label: "Headlines background (bottom)" },
@@ -409,20 +385,6 @@ const STORAGE_HEADLINES_KEY = "smnl_ticker_headlines_v1";
 let currentTheme = { ...DEFAULT_THEME };
 let currentHeadlines = [ ...DEFAULT_HEADLINES ];
 
-// ------------------------------------------------------------
-// Auto-scaling. The ticker is authored at a fixed reference
-// canvas (DESIGN_W x DESIGN_H = 1920x1080, matching a standard
-// stream canvas). Whatever pixel Width/Height you type into the
-// OBS Browser Source Properties panel, this scales the whole
-// canvas uniformly to fit that box. Set the source to exactly
-// 1920x1080 for a clean 1:1 match with your scene.
-//
-// Because the source is now a full 1920x1080 frame (ticker
-// docked at the bottom, rest filled with the greenscreen
-// color), Interact mode in OBS gives you the full canvas to
-// work with - so the settings panel (Shift+E) can just live on
-// this same page and edits apply live, no pop-up/refresh needed.
-// ------------------------------------------------------------
 const DESIGN_W = 1920;
 const DESIGN_H = 1080;
 const stage = document.getElementById("stage");
@@ -659,9 +621,6 @@ async function loadScores(){
   startScoreCycle(scores);
 }
 
-// ------------------------------------------------------------
-// Settings panel — populate, edit, save (all live to localStorage)
-// ------------------------------------------------------------
 function escapeAttr(str){
   return String(str).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 }
@@ -758,9 +717,6 @@ window.addEventListener("keydown", e => {
   }
 });
 
-// ------------------------------------------------------------
-// Init
-// ------------------------------------------------------------
 loadSettingsFromStorage();
 applyTheme();
 renderHeadlines(currentHeadlines.length ? currentHeadlines : [{ flag: "News", text: "You are watching SMNL Baseball" }, { flag: "Website", text: "Checkout the SMNL website at https://smnl-web.vercel.app/" }]);
