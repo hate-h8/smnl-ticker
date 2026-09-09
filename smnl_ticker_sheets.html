@@ -311,7 +311,7 @@ textarea.import-export{
 <div class="settings-overlay" id="settingsOverlay">
   <div class="settings-card">
     <h2>Ticker Settings</h2>
-    <p class="hint">Press <strong>Shift+E</strong> anytime to open or close this panel. Changes save automatically to this browser source and apply immediately — no file editing needed.</p>
+    <p class="hint">Press <strong>Shift+E</strong> anytime to open or close this panel. Changes save automatically to this browser source and apply immediately.</p>
 
     <div class="settings-section">
       <h3>Colors</h3>
@@ -325,8 +325,8 @@ textarea.import-export{
     </div>
 
     <div class="settings-section">
-      <h3>Backup / Transfer</h3>
-      <p class="hint">OBS keeps these settings inside this specific browser source. If you ever need to move them to a new PC or a second source, copy the box below and paste it into the new one.</p>
+      <h3>Transfer</h3>
+      <p class="hint">When you are done editing the colors (outside of OBS), open this modal again in OBS, then paste it in the box, then select Load.</p>
       <textarea class="import-export" id="importExportBox" placeholder="Click 'Copy current settings' to fill this in"></textarea>
       <div class="btn-row">
         <button class="btn btn-outline" id="exportBtn" type="button">Copy current settings</button>
@@ -350,8 +350,8 @@ textarea.import-export{
 // and saved through the panel itself.
 // ============================================================
 const THEME_META = [
-  { key: "--field",      label: "Bar background (top)" },
-  { key: "--field-dark", label: "Bar background (bottom)" },
+  { key: "--field",      label: "Headlines background (top)" },
+  { key: "--field-dark", label: "Headlines background (bottom)" },
   { key: "--navy",       label: "League/score box background" },
   { key: "--gold",       label: "Accent (borders, highlights)" },
   { key: "--chalk",      label: "Text color" },
@@ -366,8 +366,9 @@ const DEFAULT_THEME = {
 };
 
 const DEFAULT_HEADLINES = [
-  { flag: "NEWS", text: "Week 12 games rescheduled to Thursday" },
-  { flag: "",     text: "Good luck this weekend, Sandlot League!" },
+  { flag: "News", text: "You are watching SMNL Baseball" },
+  { flag: "Website", text: "Checkout the SMNL website at https://smnl-web.vercel.app/" },
+  { flag: "H8", text: "Shoutout H8 for making the ticker},
 ];
 
 const STORAGE_THEME_KEY = "smnl_ticker_theme_v1";
@@ -401,7 +402,7 @@ function persistTheme(){
 
 function persistHeadlines(){
   localStorage.setItem(STORAGE_HEADLINES_KEY, JSON.stringify(currentHeadlines));
-  renderHeadlines(currentHeadlines.length ? currentHeadlines : [{ flag: "", text: "Press Shift+E to add a headline" }]);
+  renderHeadlines(currentHeadlines.length ? currentHeadlines : [{ flag: "News", text: "You are watching SMNL Baseball" }, { flag: "Website", text: "Checkout the SMNL website at https://smnl-web.vercel.app/" }]);
 }
 
 const SUPABASE_URL = "https://hhjmginyyvcrngvcnhdb.supabase.co";
@@ -703,7 +704,7 @@ window.addEventListener("keydown", e => {
 // ------------------------------------------------------------
 loadSettingsFromStorage();
 applyTheme();
-renderHeadlines(currentHeadlines.length ? currentHeadlines : [{ flag: "", text: "Press Shift+E to add a headline" }]);
+renderHeadlines(currentHeadlines.length ? currentHeadlines : [{ flag: "News", text: "You are watching SMNL Baseball" }, { flag: "Website", text: "Checkout the SMNL website at https://smnl-web.vercel.app/" }]);
 loadScores();
 setInterval(loadScores, REFRESH_SECONDS * 1000);
 window.addEventListener("resize", fitScoreContent);
