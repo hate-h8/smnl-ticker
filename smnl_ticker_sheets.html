@@ -8,11 +8,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Baloo+2:wght@600;700&display=swap');
 
 :root{
-  --field: #173D2E;
-  --field-dark: #102A20;
-  --chalk: #F4EFE1;
-  --navy: #12233B;
-  --gold: #F2B33D;
+  --headline-bg-top: #1C68FF;
+  --headline-bg-bottom: #1C68FF;
+  --text: #FFFFFF;
+  --box-bg: #FE285B;
+  --accent: #E2B22C;
   --greenscreen: #00FF00;
 }
 
@@ -42,9 +42,9 @@ html, body{
   position: relative;
   width: 100%;
   height: 92px;
-  background: linear-gradient(180deg, var(--field) 0%, var(--field-dark) 100%);
-  border-top: 4px solid var(--gold);
-  border-bottom: 4px solid var(--gold);
+  background: linear-gradient(180deg, var(--headline-bg-top) 0%, var(--headline-bg-bottom) 100%);
+  border-top: 4px solid var(--accent);
+  border-bottom: 4px solid var(--accent);
   display: flex;
   align-items: center;
   box-shadow: 0 4px 18px rgba(0,0,0,.35);
@@ -58,15 +58,15 @@ html, body{
   justify-content: center;
   align-items: center;
   padding: 0 28px;
-  background: var(--navy);
-  border-right: 4px solid var(--gold);
+  background: var(--box-bg);
+  border-right: 4px solid var(--accent);
   z-index: 2;
 }
 .league-tag .name{
   font-family: 'Baloo 2', sans-serif;
   font-weight: 700;
   font-size: 22px;
-  color: var(--chalk);
+  color: var(--text);
   letter-spacing: .5px;
   white-space: nowrap;
 }
@@ -74,7 +74,7 @@ html, body{
   font-family: 'Teko', sans-serif;
   font-weight: 500;
   font-size: 15px;
-  color: var(--gold);
+  color: var(--accent);
   letter-spacing: 2px;
   white-space: nowrap;
   margin-top: -2px;
@@ -113,15 +113,15 @@ html, body{
   font-family: 'Baloo 2', sans-serif;
   font-weight: 700;
   font-size: 21px;
-  color: var(--chalk);
+  color: var(--text);
 }
-.team.win{ color: var(--gold); }
+.team.win{ color: var(--accent); }
 
 .score{
   font-family: 'Teko', sans-serif;
   font-weight: 600;
   font-size: 34px;
-  color: var(--chalk);
+  color: var(--text);
   margin: 0 3px;
   line-height: 1;
 }
@@ -137,10 +137,10 @@ html, body{
   font-family: 'Baloo 2', sans-serif;
   font-weight: 600;
   font-size: 19px;
-  color: var(--chalk);
+  color: var(--text);
 }
 .item .headline .flag{
-  color: var(--gold);
+  color: var(--accent);
   font-weight: 700;
   margin-right: 10px;
 }
@@ -149,8 +149,8 @@ html, body{
   font-family: 'Teko', sans-serif;
   font-weight: 600;
   font-size: 16px;
-  color: var(--field-dark);
-  background: var(--gold);
+  color: var(--headline-bg-bottom);
+  background: var(--accent);
   padding: 3px 9px 1px;
   border-radius: 4px;
   margin-left: 12px;
@@ -163,8 +163,8 @@ html, body{
   height: 100%;
   position: relative;
   overflow: hidden;
-  background: var(--navy);
-  border-right: 4px solid var(--gold);
+  background: var(--box-bg);
+  border-right: 4px solid var(--accent);
   z-index: 2;
 }
 
@@ -201,7 +201,7 @@ html, body{
   font-family: 'Teko', sans-serif;
   font-weight: 600;
   font-size: 14px;
-  color: var(--gold);
+  color: var(--accent);
   margin-right: 10px;
   letter-spacing: 1px;
 }
@@ -249,22 +249,22 @@ html, body{
 .settings-overlay.open{ display: flex; }
 
 .settings-card{
-  background: #12233B;
-  border: 3px solid #F2B33D;
+  background: #1C68FF;
+  border: 3px solid #E2B22C;
   border-radius: 12px;
   padding: 24px 28px;
   width: 520px;
   max-width: 90vw;
   max-height: 85vh;
   overflow-y: auto;
-  color: #F4EFE1;
+  color: #FFFFFF;
 }
-.settings-card h2{ margin: 0 0 4px; font-size: 20px; color: #F2B33D; }
-.settings-card p.hint{ margin: 0 0 18px; font-size: 13px; color: rgba(244,239,225,.6); line-height: 1.4; }
+.settings-card h2{ margin: 0 0 4px; font-size: 20px; color: #E2B22C; }
+.settings-card p.hint{ margin: 0 0 18px; font-size: 13px; color: rgba(255,255,255,.7); line-height: 1.4; }
 .settings-section{ margin-bottom: 22px; }
 .settings-section h3{
   font-size: 13px; letter-spacing: 1px; text-transform: uppercase;
-  color: #F2B33D; margin: 0 0 10px;
+  color: #E2B22C; margin: 0 0 10px;
 }
 
 .color-row{
@@ -278,14 +278,14 @@ html, body{
 
 .headline-row{ display: flex; gap: 6px; margin-bottom: 8px; }
 .headline-row input[type=text]{
-  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.25);
-  color: #F4EFE1; border-radius: 4px; padding: 6px 8px; font-size: 13px;
+  background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.35);
+  color: #FFFFFF; border-radius: 4px; padding: 6px 8px; font-size: 13px;
   font-family: 'Baloo 2', sans-serif;
 }
 .headline-row .flag-input{ width: 76px; }
 .headline-row .text-input{ flex: 1; }
 .headline-row button{
-  background: #C9432F; border: none; color: #fff; border-radius: 4px;
+  background: #FE285B; border: none; color: #FFFFFF; border-radius: 4px;
   width: 30px; cursor: pointer; font-weight: 700; font-size: 15px;
 }
 
@@ -293,14 +293,14 @@ html, body{
   font-family: 'Baloo 2', sans-serif; font-weight: 700; border: none;
   border-radius: 6px; padding: 9px 16px; cursor: pointer; font-size: 13px;
 }
-.btn-gold{ background: #F2B33D; color: #102A20; }
-.btn-outline{ background: transparent; border: 1.5px solid rgba(244,239,225,.4); color: #F4EFE1; }
+.btn-gold{ background: #E2B22C; color: #FFFFFF; }
+.btn-outline{ background: transparent; border: 1.5px solid rgba(255,255,255,.5); color: #FFFFFF; }
 .btn-row{ display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
 
 textarea.import-export{
   width: 100%; box-sizing: border-box; height: 70px; resize: vertical;
-  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.25);
-  color: #F4EFE1; border-radius: 4px; padding: 8px; font-family: monospace;
+  background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.35);
+  color: #FFFFFF; border-radius: 4px; padding: 8px; font-family: monospace;
   font-size: 11px; margin-bottom: 10px;
 }
 
@@ -361,19 +361,19 @@ textarea.import-export{
 <script>
 
 const THEME_META = [
-  { key: "--field",      label: "Headlines background (top)" },
-  { key: "--field-dark", label: "Headlines background (bottom)" },
-  { key: "--navy",       label: "League/score box background" },
-  { key: "--gold",       label: "Accent (borders, highlights)" },
-  { key: "--chalk",      label: "Text color" },
+  { key: "--headline-bg-top",      label: "Headlines background (top)" },
+  { key: "--headline-bg-bottom", label: "Headlines background (bottom)" },
+  { key: "--box-bg",       label: "League/score box background" },
+  { key: "--accent",       label: "Accent (borders, highlights)" },
+  { key: "--text",      label: "Text color" },
 ];
 
 const DEFAULT_THEME = {
-  "--field": "#173D2E",
-  "--field-dark": "#102A20",
-  "--navy": "#12233B",
-  "--gold": "#F2B33D",
-  "--chalk": "#F4EFE1",
+  "--headline-bg-top": "#1C68FF",
+  "--headline-bg-bottom": "#1C68FF",
+  "--box-bg": "#FE285B",
+  "--accent": "#E2B22C",
+  "--text": "#FFFFFF",
   "--greenscreen": "#00FF00",
 };
 
