@@ -106,7 +106,6 @@ html, body{
   font-weight: 600;
   font-size: 34px;
   color: var(--chalk);
-  margin: 0 6px;
   line-height: 1;
 }
 
@@ -114,7 +113,6 @@ html, body{
   font-family: 'Teko', sans-serif;
   font-size: 20px;
   color: rgba(244,239,225,.55);
-  margin: 0 10px;
 }
 
 .item .headline{
@@ -143,7 +141,7 @@ html, body{
 
 .score-box{
   flex: 0 0 auto;
-  width: 340px;
+  width: 620px;
   height: 100%;
   position: relative;
   overflow: hidden;
@@ -166,8 +164,8 @@ html, body{
 .score-fit{
   display: inline-grid;
   grid-template-columns: auto minmax(0,max-content) max-content max-content max-content minmax(0,max-content) auto;
-  column-gap: 10px;
-  row-gap: 6px;
+  column-gap: 6px;
+  row-gap: 8px;
   align-items: center;
   white-space: nowrap;
   transform-origin: center center;
@@ -569,7 +567,7 @@ function fitScoreContent(){
   const neededH = fit.scrollHeight;
   if(neededW === 0 || neededH === 0) return;
   let scale = Math.min(availableW / neededW, availableH / neededH);
-  scale = Math.max(0.4, Math.min(scale, 1.3));
+  scale = Math.max(0.4, Math.min(scale, 1.8));
   fit.style.transform = `scale(${scale})`;
 }
 
