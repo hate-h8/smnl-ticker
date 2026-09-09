@@ -13,7 +13,6 @@
   --chalk: #F4EFE1;
   --navy: #12233B;
   --gold: #F2B33D;
-  --red: #C9432F;
 }
 
 html, body{
@@ -165,18 +164,33 @@ html, body{
 }
 
 .score-fit{
-  display: inline-flex;
-  flex-direction: column;
+  display: inline-grid;
+  grid-template-columns: auto minmax(0,max-content) max-content max-content max-content minmax(0,max-content) auto;
+  column-gap: 10px;
+  row-gap: 6px;
   align-items: center;
-  gap: 5px;
   white-space: nowrap;
   transform-origin: center center;
 }
 
 .score-row{
-  display: flex;
-  align-items: center;
+  display: contents;
 }
+
+.score-row.full-span{
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.game-label{ justify-self: end; }
+.team.away{ justify-self: end; text-align: right; }
+.team.home{ justify-self: start; text-align: left; }
+.score.away{ justify-self: end; }
+.score.home{ justify-self: start; }
+.at{ justify-self: center; }
 
 .game-label{
   font-family: 'Teko', sans-serif;
@@ -217,6 +231,77 @@ html, body{
   background: rgba(244,239,225,.25);
 }
 
+/* ------------------------------------------------------------
+   Settings panel — hidden until Shift+E is pressed.
+   ------------------------------------------------------------ */
+.settings-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.75);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  font-family: 'Baloo 2', sans-serif;
+}
+.settings-overlay.open{ display: flex; }
+
+.settings-card{
+  background: var(--navy);
+  border: 3px solid var(--gold);
+  border-radius: 12px;
+  padding: 24px 28px;
+  width: 520px;
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow-y: auto;
+  color: var(--chalk);
+}
+.settings-card h2{ margin: 0 0 4px; font-size: 20px; color: var(--gold); }
+.settings-card p.hint{ margin: 0 0 18px; font-size: 13px; color: rgba(244,239,225,.6); line-height: 1.4; }
+.settings-section{ margin-bottom: 22px; }
+.settings-section h3{
+  font-size: 13px; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--gold); margin: 0 0 10px;
+}
+
+.color-row{
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px; font-size: 14px;
+}
+.color-row input[type=color]{
+  width: 44px; height: 28px; border: none; border-radius: 4px;
+  cursor: pointer; background: none; padding: 0;
+}
+
+.headline-row{ display: flex; gap: 6px; margin-bottom: 8px; }
+.headline-row input[type=text]{
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.25);
+  color: var(--chalk); border-radius: 4px; padding: 6px 8px; font-size: 13px;
+  font-family: 'Baloo 2', sans-serif;
+}
+.headline-row .flag-input{ width: 76px; }
+.headline-row .text-input{ flex: 1; }
+.headline-row button{
+  background: #C9432F; border: none; color: #fff; border-radius: 4px;
+  width: 30px; cursor: pointer; font-weight: 700; font-size: 15px;
+}
+
+.btn{
+  font-family: 'Baloo 2', sans-serif; font-weight: 700; border: none;
+  border-radius: 6px; padding: 9px 16px; cursor: pointer; font-size: 13px;
+}
+.btn-gold{ background: var(--gold); color: var(--field-dark); }
+.btn-outline{ background: transparent; border: 1.5px solid rgba(244,239,225,.4); color: var(--chalk); }
+.btn-row{ display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+
+textarea.import-export{
+  width: 100%; box-sizing: border-box; height: 70px; resize: vertical;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.25);
+  color: var(--chalk); border-radius: 4px; padding: 8px; font-family: monospace;
+  font-size: 11px; margin-bottom: 10px;
+}
+
 </style>
 </head>
 <body>
@@ -234,18 +319,102 @@ html, body{
   </div>
 </div>
 
+<div class="settings-overlay" id="settingsOverlay">
+  <div class="settings-card">
+    <h2>Ticker Settings</h2>
+    <p class="hint">Press <strong>Shift+E</strong> anytime to open or close this panel. Changes save automatically to this browser source and apply immediately — no file editing needed.</p>
+
+    <div class="settings-section">
+      <h3>Colors</h3>
+      <div id="colorRows"></div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Headlines</h3>
+      <div id="headlineRows"></div>
+      <button class="btn btn-outline" id="addHeadlineBtn" type="button">+ Add headline</button>
+    </div>
+
+    <div class="settings-section">
+      <h3>Backup / Transfer</h3>
+      <p class="hint">OBS keeps these settings inside this specific browser source. If you ever need to move them to a new PC or a second source, copy the box below and paste it into the new one.</p>
+      <textarea class="import-export" id="importExportBox" placeholder="Click 'Copy current settings' to fill this in"></textarea>
+      <div class="btn-row">
+        <button class="btn btn-outline" id="exportBtn" type="button">Copy current settings</button>
+        <button class="btn btn-outline" id="importBtn" type="button">Load settings above</button>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-gold" id="closePanelBtn" type="button">Done</button>
+      <button class="btn btn-outline" id="resetBtn" type="button">Reset to defaults</button>
+    </div>
+  </div>
+</div>
+
 <script>
 
 // ============================================================
-// PASTE YOUR PUBLISHED GOOGLE SHEET CSV URL BELOW (headlines only)
-// (File -> Share -> Publish to web -> CSV, in Google Sheets)
+// DEFAULTS — used the first time the ticker loads in a fresh
+// OBS source, or if someone hits "Reset to defaults" in the
+// settings panel (Shift+E). After that, everything is edited
+// and saved through the panel itself.
 // ============================================================
-const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSP59wDgCakUu1rGQMs2OaOXyGOqM-z0Hgp1MDbSMxoKswawRwByrmK2E4GwX_Y9hNQl5Tmw3IDmiWo/pub?output=csv";
+const THEME_META = [
+  { key: "--field",      label: "Bar background (top)" },
+  { key: "--field-dark", label: "Bar background (bottom)" },
+  { key: "--navy",       label: "League/score box background" },
+  { key: "--gold",       label: "Accent (borders, highlights)" },
+  { key: "--chalk",      label: "Text color" },
+];
 
-// ============================================================
-// SMNL Supabase config (scores) — from the API request found in
-// DevTools. Update these only if SMNL changes their database.
-// ============================================================
+const DEFAULT_THEME = {
+  "--field": "#173D2E",
+  "--field-dark": "#102A20",
+  "--navy": "#12233B",
+  "--gold": "#F2B33D",
+  "--chalk": "#F4EFE1",
+};
+
+const DEFAULT_HEADLINES = [
+  { flag: "NEWS", text: "Week 12 games rescheduled to Thursday" },
+  { flag: "",     text: "Good luck this weekend, Sandlot League!" },
+];
+
+const STORAGE_THEME_KEY = "smnl_ticker_theme_v1";
+const STORAGE_HEADLINES_KEY = "smnl_ticker_headlines_v1";
+
+let currentTheme = { ...DEFAULT_THEME };
+let currentHeadlines = [ ...DEFAULT_HEADLINES ];
+
+function loadSettingsFromStorage(){
+  try{
+    const t = localStorage.getItem(STORAGE_THEME_KEY);
+    if(t) currentTheme = { ...DEFAULT_THEME, ...JSON.parse(t) };
+  }catch(e){ console.error("Failed to load saved theme:", e); }
+  try{
+    const h = localStorage.getItem(STORAGE_HEADLINES_KEY);
+    const parsed = h ? JSON.parse(h) : null;
+    if(Array.isArray(parsed) && parsed.length) currentHeadlines = parsed;
+  }catch(e){ console.error("Failed to load saved headlines:", e); }
+}
+
+function applyTheme(){
+  Object.entries(currentTheme).forEach(([cssVar, value]) => {
+    document.documentElement.style.setProperty(cssVar, value);
+  });
+}
+
+function persistTheme(){
+  localStorage.setItem(STORAGE_THEME_KEY, JSON.stringify(currentTheme));
+  applyTheme();
+}
+
+function persistHeadlines(){
+  localStorage.setItem(STORAGE_HEADLINES_KEY, JSON.stringify(currentHeadlines));
+  renderHeadlines(currentHeadlines.length ? currentHeadlines : [{ flag: "", text: "Press Shift+E to add a headline" }]);
+}
+
 const SUPABASE_URL = "https://hhjmginyyvcrngvcnhdb.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_JSBxFG27P4j44Ou1ivP3gw_oSBm-AVs";
 const LEAGUES = [
@@ -254,71 +423,18 @@ const LEAGUES = [
   { seasonId: 7, label: "LEGENDARY" },
 ];
 
-// How many matchup pairs to pull per league, most recent first.
 const PAIRS_PER_LEAGUE = 24;
-
-// How often to re-check both sources for updates, in seconds.
 const REFRESH_SECONDS = 60;
-
-// How fast the headline ticker scrolls. Higher number = slower.
 const SCROLL_SECONDS = 45;
-
-// How many seconds each score is shown before flipping to the next.
 const SCORE_INTERVAL_SECONDS = 10;
 
-// Shown while nothing has loaded yet / if the sheet is unreachable.
-const FALLBACK_HEADLINES = [
-  { type: "headline", flag: "SETUP", text: "Paste your Google Sheet CSV link into SHEET_CSV_URL in this file" },
-];
 
-// ------------------------------------------------------------
-// CSV parsing — handles quoted fields containing commas.
-// ------------------------------------------------------------
-function parseCSV(text){
-  const rows = [];
-  let row = [], field = "", inQuotes = false;
-  for(let i=0; i<text.length; i++){
-    const c = text[i], next = text[i+1];
-    if(inQuotes){
-      if(c === '"' && next === '"'){ field += '"'; i++; }
-      else if(c === '"'){ inQuotes = false; }
-      else{ field += c; }
-    } else {
-      if(c === '"'){ inQuotes = true; }
-      else if(c === ','){ row.push(field); field = ""; }
-      else if(c === '\n' || c === '\r'){
-        if(c === '\r' && next === '\n') i++;
-        row.push(field); field = "";
-        rows.push(row); row = [];
-      } else { field += c; }
-    }
-  }
-  if(field.length || row.length){ row.push(field); rows.push(row); }
-  return rows.filter(r => r.some(f => f.trim() !== ""));
-}
-
-function rowsToHeadlines(rows){
-  if(!rows.length) return [];
-  const header = rows[0].map(h => h.trim().toLowerCase());
-  const idx = name => header.indexOf(name);
-  const iType = idx("type"), iA = idx("a"), iB = idx("b");
-
-  return rows.slice(1).map(r => {
-    const type = (r[iType] || "").trim().toLowerCase();
-    if(type !== "headline") return null;
-    return { type: "headline", flag: r[iA], text: r[iB] };
-  }).filter(Boolean);
-}
-
-// ------------------------------------------------------------
-// Supabase — fetch games for one league and pair up matchups.
-// ------------------------------------------------------------
 async function fetchLeagueGames(league){
   const params = new URLSearchParams({
     select: "week,game_number,status,innings,home_team:teams!home_team_id(id,name),away_team:teams!away_team_id(id,name),lines:game_team_stats(is_home,runs)",
     season_id: `eq.${league.seasonId}`,
     order: "week.desc,game_number.desc",
-    limit: String(PAIRS_PER_LEAGUE * 3), // extra buffer since games are grouped into pairs
+    limit: String(PAIRS_PER_LEAGUE * 3),
   });
   const url = `${SUPABASE_URL}/rest/v1/games?${params.toString()}`;
   const res = await fetch(url, {
@@ -347,7 +463,6 @@ async function fetchLeagueGames(league){
     };
   });
 
-  // Group games into matchup pairs: same week, same two teams (order-independent).
   const groups = new Map();
   games.forEach(g => {
     if(g.homeTeamId === null || g.awayTeamId === null) return;
@@ -360,7 +475,7 @@ async function fetchLeagueGames(league){
   const pairs = [];
   groups.forEach(arr => {
     arr.sort((a, b) => a.gameNumber - b.gameNumber);
-    if(!arr.some(g => g.isFinal)) return; // skip pairs where nothing has been played yet
+    if(!arr.some(g => g.isFinal)) return;
     pairs.push({
       type: "score",
       league: league.label,
@@ -381,18 +496,14 @@ async function fetchAllScores(){
     if(r.status === "fulfilled") pairs.push(...r.value);
     else console.error("Failed to load scores for a league:", r.reason);
   });
-  // Roughly chronological across leagues since all run the same weeks.
   pairs.sort((a, b) => (b.week - a.week) || (b.maxGameNumber - a.maxGameNumber));
   return pairs.slice(0, PAIRS_PER_LEAGUE * LEAGUES.length);
 }
 
-// ------------------------------------------------------------
-// Rendering
-// ------------------------------------------------------------
 function renderGameRow(game, label){
   if(!game){
     return `
-      <div class="score-row scheduled">
+      <div class="score-row scheduled full-span">
         <span class="game-label">${label}</span>
         <span class="scheduled-text">Not yet played</span>
       </div>`;
@@ -401,24 +512,26 @@ function renderGameRow(game, label){
     return `
       <div class="score-row scheduled">
         <span class="game-label">${label}</span>
-        <span class="team">${game.away}</span>
+        <span class="team away">${game.away}</span>
+        <span class="score-empty"></span>
         <span class="at">@</span>
-        <span class="team">${game.home}</span>
+        <span class="score-empty"></span>
+        <span class="team home">${game.home}</span>
         <span class="scheduled-text">Not yet played</span>
       </div>`;
   }
   const awayWin = game.awayScore > game.homeScore;
   const homeWin = game.homeScore > game.awayScore;
   const showFinalTag = game.innings && game.innings !== 9;
-  const finalTag = showFinalTag ? `<span class="final-tag">F/${game.innings}</span>` : "";
+  const finalTag = showFinalTag ? `<span class="final-tag">F/${game.innings}</span>` : "<span></span>";
   return `
     <div class="score-row">
       <span class="game-label">${label}</span>
-      <span class="team ${awayWin ? "win" : ""}">${game.away}</span>
-      <span class="score">${game.awayScore}</span>
+      <span class="team away ${awayWin ? "win" : ""}">${game.away}</span>
+      <span class="score away">${game.awayScore}</span>
       <span class="at">@</span>
-      <span class="score">${game.homeScore}</span>
-      <span class="team ${homeWin ? "win" : ""}">${game.home}</span>
+      <span class="score home">${game.homeScore}</span>
+      <span class="team home ${homeWin ? "win" : ""}">${game.home}</span>
       ${finalTag}
     </div>`;
 }
@@ -450,13 +563,13 @@ function fitScoreContent(){
   const fit = scoreSlide.querySelector(".score-fit");
   if(!fit) return;
   fit.style.transform = "scale(1)";
-  const availableW = scoreSlide.clientWidth - 44;  // minus left/right padding
+  const availableW = scoreSlide.clientWidth - 44;
   const availableH = scoreSlide.clientHeight;
   const neededW = fit.scrollWidth;
   const neededH = fit.scrollHeight;
   if(neededW === 0 || neededH === 0) return;
   let scale = Math.min(availableW / neededW, availableH / neededH);
-  scale = Math.max(0.4, Math.min(scale, 1.3)); // keep it within a sane range
+  scale = Math.max(0.4, Math.min(scale, 1.3));
   fit.style.transform = `scale(${scale})`;
 }
 
@@ -470,7 +583,7 @@ function showScore(index){
   leagueName.textContent = it.league ? `${it.league} LEAGUE` : "SMNL";
   scoreSlide.classList.remove("enter");
   scoreSlide.innerHTML = `<div class="score-fit">${renderScoreInner(it)}</div>`;
-  void scoreSlide.offsetWidth; // force reflow so the animation replays
+  void scoreSlide.offsetWidth;
   scoreSlide.classList.add("enter");
   requestAnimationFrame(fitScoreContent);
 }
@@ -489,38 +602,123 @@ function startScoreCycle(items){
 }
 
 function renderHeadlines(items){
-  if(!items.length) items = FALLBACK_HEADLINES;
   let html = "";
   items.forEach(it => { html += renderHeadlineInner(it) + `<div class="divider"></div>`; });
-  track.innerHTML = html + html; // duplicate for seamless infinite scroll
+  track.innerHTML = html + html;
 }
 
-async function loadHeadlines(){
-  if(!SHEET_CSV_URL || SHEET_CSV_URL.indexOf("PASTE_YOUR") !== -1){
-    return FALLBACK_HEADLINES;
-  }
-  try{
-    const res = await fetch(SHEET_CSV_URL + (SHEET_CSV_URL.includes("?") ? "&" : "?") + "_ts=" + Date.now());
-    const text = await res.text();
-    const rows = parseCSV(text);
-    return rowsToHeadlines(rows);
-  } catch(err){
-    console.error("Failed to load headline sheet:", err);
-    return FALLBACK_HEADLINES;
-  }
-}
-
-async function loadAll(){
-  const [headlines, scores] = await Promise.all([
-    loadHeadlines(),
-    fetchAllScores().catch(err => { console.error("Failed to load scores:", err); return []; }),
-  ]);
-  renderHeadlines(headlines);
+async function loadScores(){
+  const scores = await fetchAllScores().catch(err => { console.error("Failed to load scores:", err); return []; });
   startScoreCycle(scores);
 }
 
-loadAll();
-setInterval(loadAll, REFRESH_SECONDS * 1000);
+// ------------------------------------------------------------
+// Settings panel — populate, edit, save (all live to localStorage)
+// ------------------------------------------------------------
+function escapeAttr(str){
+  return String(str).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}
+
+function buildColorRows(){
+  const container = document.getElementById("colorRows");
+  container.innerHTML = "";
+  THEME_META.forEach(meta => {
+    const row = document.createElement("div");
+    row.className = "color-row";
+    row.innerHTML = `<span>${meta.label}</span><input type="color" value="${currentTheme[meta.key] || DEFAULT_THEME[meta.key]}" data-key="${meta.key}">`;
+    container.appendChild(row);
+  });
+  container.querySelectorAll("input[type=color]").forEach(input => {
+    input.addEventListener("input", e => {
+      currentTheme[e.target.dataset.key] = e.target.value;
+      persistTheme();
+    });
+  });
+}
+
+function buildHeadlineRows(){
+  const container = document.getElementById("headlineRows");
+  container.innerHTML = "";
+  currentHeadlines.forEach((h, i) => {
+    const row = document.createElement("div");
+    row.className = "headline-row";
+    row.innerHTML = `
+      <input type="text" class="flag-input" placeholder="FLAG" value="${escapeAttr(h.flag || "")}">
+      <input type="text" class="text-input" placeholder="Headline text" value="${escapeAttr(h.text || "")}">
+      <button type="button" title="Remove">&times;</button>`;
+    const flagInput = row.querySelector(".flag-input");
+    const textInput = row.querySelector(".text-input");
+    const removeBtn = row.querySelector("button");
+    flagInput.addEventListener("input", () => { currentHeadlines[i].flag = flagInput.value; persistHeadlines(); });
+    textInput.addEventListener("input", () => { currentHeadlines[i].text = textInput.value; persistHeadlines(); });
+    removeBtn.addEventListener("click", () => { currentHeadlines.splice(i, 1); persistHeadlines(); buildHeadlineRows(); });
+    container.appendChild(row);
+  });
+}
+
+const overlay = document.getElementById("settingsOverlay");
+function openPanel(){ buildColorRows(); buildHeadlineRows(); overlay.classList.add("open"); }
+function closePanel(){ overlay.classList.remove("open"); }
+function togglePanel(){ overlay.classList.contains("open") ? closePanel() : openPanel(); }
+
+document.getElementById("addHeadlineBtn").addEventListener("click", () => {
+  currentHeadlines.push({ flag: "", text: "" });
+  persistHeadlines();
+  buildHeadlineRows();
+});
+
+document.getElementById("resetBtn").addEventListener("click", () => {
+  if(!confirm("Reset colors and headlines to the built-in defaults?")) return;
+  currentTheme = { ...DEFAULT_THEME };
+  currentHeadlines = [ ...DEFAULT_HEADLINES ];
+  persistTheme();
+  persistHeadlines();
+  buildColorRows();
+  buildHeadlineRows();
+});
+
+document.getElementById("exportBtn").addEventListener("click", () => {
+  const box = document.getElementById("importExportBox");
+  box.value = JSON.stringify({ theme: currentTheme, headlines: currentHeadlines }, null, 2);
+  box.select();
+  try{ document.execCommand("copy"); }catch(e){}
+});
+
+document.getElementById("importBtn").addEventListener("click", () => {
+  const box = document.getElementById("importExportBox");
+  try{
+    const data = JSON.parse(box.value);
+    if(data.theme) currentTheme = { ...DEFAULT_THEME, ...data.theme };
+    if(Array.isArray(data.headlines)) currentHeadlines = data.headlines;
+    persistTheme();
+    persistHeadlines();
+    buildColorRows();
+    buildHeadlineRows();
+    alert("Settings loaded.");
+  }catch(e){
+    alert("That doesn't look like valid settings JSON.");
+  }
+});
+
+document.getElementById("closePanelBtn").addEventListener("click", closePanel);
+overlay.addEventListener("click", e => { if(e.target === overlay) closePanel(); });
+
+window.addEventListener("keydown", e => {
+  if(e.shiftKey && e.key.toLowerCase() === "e"){
+    togglePanel();
+  } else if(e.key === "Escape"){
+    closePanel();
+  }
+});
+
+// ------------------------------------------------------------
+// Init
+// ------------------------------------------------------------
+loadSettingsFromStorage();
+applyTheme();
+renderHeadlines(currentHeadlines.length ? currentHeadlines : [{ flag: "", text: "Press Shift+E to add a headline" }]);
+loadScores();
+setInterval(loadScores, REFRESH_SECONDS * 1000);
 window.addEventListener("resize", fitScoreContent);
 
 </script>
