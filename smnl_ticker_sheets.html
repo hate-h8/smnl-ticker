@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>SMNL League Ticker — Scores & Headlines</title>
+<title>SMB4 League Ticker — Scores & Headlines (Google Sheets)</title>
 <style>
 
 @import url('https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Baloo+2:wght@600;700&display=swap');
@@ -94,15 +94,15 @@ html, body{
   flex: 0 0 auto;
 }
 
-.item .team{
+.team{
   font-family: 'Baloo 2', sans-serif;
   font-weight: 700;
   font-size: 21px;
   color: var(--chalk);
 }
-.item .team.win{ color: var(--gold); }
+.team.win{ color: var(--gold); }
 
-.item .score{
+.score{
   font-family: 'Teko', sans-serif;
   font-weight: 600;
   font-size: 34px;
@@ -111,7 +111,7 @@ html, body{
   line-height: 1;
 }
 
-.item .at{
+.at{
   font-family: 'Teko', sans-serif;
   font-size: 20px;
   color: rgba(244,239,225,.55);
@@ -130,7 +130,7 @@ html, body{
   margin-right: 10px;
 }
 
-.item .final-tag{
+.final-tag{
   font-family: 'Teko', sans-serif;
   font-weight: 600;
   font-size: 16px;
@@ -166,9 +166,38 @@ html, body{
 
 .score-fit{
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
+  gap: 5px;
   white-space: nowrap;
   transform-origin: center center;
+}
+
+.score-row{
+  display: flex;
+  align-items: center;
+}
+
+.game-label{
+  font-family: 'Teko', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--gold);
+  margin-right: 10px;
+  letter-spacing: 1px;
+}
+
+.score-row.scheduled{
+  opacity: .7;
+}
+
+.scheduled-text{
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  font-style: italic;
+  color: rgba(244,239,225,.55);
+  margin-left: 10px;
 }
 
 @keyframes score-enter{
@@ -195,7 +224,7 @@ html, body{
 <div class="ticker-bar">
   <div class="league-tag">
     <div class="name" id="leagueName">SMNL</div>
-    <div class="sub">SMB4 &middot; SMNL</div>
+    <div class="sub">SMNL &middot; SMB4</div>
   </div>
   <div class="score-box" id="scoreBox">
     <div class="score-slide" id="scoreSlide"></div>
@@ -225,8 +254,8 @@ const LEAGUES = [
   { seasonId: 7, label: "LEGENDARY" },
 ];
 
-// How many finished games to pull per league, most recent first.
-const GAMES_PER_LEAGUE = 24;
+// How many matchup pairs to pull per league, most recent first.
+const PAIRS_PER_LEAGUE = 24;
 
 // How often to re-check both sources for updates, in seconds.
 const REFRESH_SECONDS = 60;
@@ -239,7 +268,7 @@ const SCORE_INTERVAL_SECONDS = 10;
 
 // Shown while nothing has loaded yet / if the sheet is unreachable.
 const FALLBACK_HEADLINES = [
-  { type: "headline", flag: "SETUP", text: "Google sheet not setup correctly" },
+  { type: "headline", flag: "SETUP", text: "Paste your Google Sheet CSV link into SHEET_CSV_URL in this file" },
 ];
 
 // ------------------------------------------------------------
@@ -282,15 +311,14 @@ function rowsToHeadlines(rows){
 }
 
 // ------------------------------------------------------------
-// Supabase — fetch finished games for one league.
+// Supabase — fetch games for one league and pair up matchups.
 // ------------------------------------------------------------
-async function fetchLeagueScores(league){
+async function fetchLeagueGames(league){
   const params = new URLSearchParams({
-    select: "week,game_number,status,innings,home_team:teams!home_team_id(name),away_team:teams!away_team_id(name),lines:game_team_stats(is_home,runs)",
+    select: "week,game_number,status,innings,home_team:teams!home_team_id(id,name),away_team:teams!away_team_id(id,name),lines:game_team_stats(is_home,runs)",
     season_id: `eq.${league.seasonId}`,
-    status: "eq.final",
     order: "week.desc,game_number.desc",
-    limit: String(GAMES_PER_LEAGUE),
+    limit: String(PAIRS_PER_LEAGUE * 3), // extra buffer since games are grouped into pairs
   });
   const url = `${SUPABASE_URL}/rest/v1/games?${params.toString()}`;
   const res = await fetch(url, {
@@ -300,56 +328,103 @@ async function fetchLeagueScores(league){
     },
   });
   if(!res.ok) throw new Error(`Supabase request failed: ${res.status}`);
-  const games = await res.json();
+  const rows = await res.json();
 
-  return games.map(g => {
-    const homeLine = g.lines.find(l => l.is_home);
-    const awayLine = g.lines.find(l => !l.is_home);
+  const games = rows.map(g => {
+    const homeLine = (g.lines || []).find(l => l.is_home);
+    const awayLine = (g.lines || []).find(l => !l.is_home);
     return {
-      type: "score",
-      league: league.label,
       week: g.week,
       gameNumber: g.game_number,
-      away: g.away_team ? g.away_team.name : "Away",
-      awayScore: awayLine ? awayLine.runs : null,
-      home: g.home_team ? g.home_team.name : "Home",
-      homeScore: homeLine ? homeLine.runs : null,
+      isFinal: g.status === "final",
       innings: g.innings,
+      homeTeamId: g.home_team ? g.home_team.id : null,
+      awayTeamId: g.away_team ? g.away_team.id : null,
+      home: g.home_team ? g.home_team.name : "Home",
+      away: g.away_team ? g.away_team.name : "Away",
+      homeScore: homeLine ? homeLine.runs : null,
+      awayScore: awayLine ? awayLine.runs : null,
     };
-  }).filter(it => it.awayScore !== null && it.homeScore !== null);
+  });
+
+  // Group games into matchup pairs: same week, same two teams (order-independent).
+  const groups = new Map();
+  games.forEach(g => {
+    if(g.homeTeamId === null || g.awayTeamId === null) return;
+    const ids = [g.homeTeamId, g.awayTeamId].sort((a, b) => a - b);
+    const key = `${g.week}:${ids[0]}-${ids[1]}`;
+    if(!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(g);
+  });
+
+  const pairs = [];
+  groups.forEach(arr => {
+    arr.sort((a, b) => a.gameNumber - b.gameNumber);
+    if(!arr.some(g => g.isFinal)) return; // skip pairs where nothing has been played yet
+    pairs.push({
+      type: "score",
+      league: league.label,
+      week: arr[0].week,
+      maxGameNumber: Math.max(...arr.map(g => g.gameNumber)),
+      game1: arr[0] || null,
+      game2: arr[1] || null,
+    });
+  });
+
+  return pairs;
 }
 
 async function fetchAllScores(){
-  const results = await Promise.allSettled(LEAGUES.map(fetchLeagueScores));
-  const scores = [];
+  const results = await Promise.allSettled(LEAGUES.map(fetchLeagueGames));
+  const pairs = [];
   results.forEach(r => {
-    if(r.status === "fulfilled") scores.push(...r.value);
+    if(r.status === "fulfilled") pairs.push(...r.value);
     else console.error("Failed to load scores for a league:", r.reason);
   });
   // Roughly chronological across leagues since all run the same weeks.
-  scores.sort((a, b) => (b.week - a.week) || (b.gameNumber - a.gameNumber));
-  return scores;
+  pairs.sort((a, b) => (b.week - a.week) || (b.maxGameNumber - a.maxGameNumber));
+  return pairs.slice(0, PAIRS_PER_LEAGUE * LEAGUES.length);
 }
 
 // ------------------------------------------------------------
 // Rendering
 // ------------------------------------------------------------
-function renderScoreInner(it){
-  const a = it.awayScore;
-  const h = it.homeScore;
-  const awayWin = a > h;
-  const homeWin = h > a;
-  const showFinalTag = it.innings && it.innings !== 9;
-  const finalTag = showFinalTag ? `<span class="final-tag">F/${it.innings}</span>` : "";
+function renderGameRow(game, label){
+  if(!game){
+    return `
+      <div class="score-row scheduled">
+        <span class="game-label">${label}</span>
+        <span class="scheduled-text">Not yet played</span>
+      </div>`;
+  }
+  if(!game.isFinal){
+    return `
+      <div class="score-row scheduled">
+        <span class="game-label">${label}</span>
+        <span class="team">${game.away}</span>
+        <span class="at">@</span>
+        <span class="team">${game.home}</span>
+        <span class="scheduled-text">Not yet played</span>
+      </div>`;
+  }
+  const awayWin = game.awayScore > game.homeScore;
+  const homeWin = game.homeScore > game.awayScore;
+  const showFinalTag = game.innings && game.innings !== 9;
+  const finalTag = showFinalTag ? `<span class="final-tag">F/${game.innings}</span>` : "";
   return `
-    <div class="item">
-      <span class="team ${awayWin ? "win" : ""}">${it.away}</span>
-      <span class="score">${it.awayScore}</span>
+    <div class="score-row">
+      <span class="game-label">${label}</span>
+      <span class="team ${awayWin ? "win" : ""}">${game.away}</span>
+      <span class="score">${game.awayScore}</span>
       <span class="at">@</span>
-      <span class="score">${it.homeScore}</span>
-      <span class="team ${homeWin ? "win" : ""}">${it.home}</span>
+      <span class="score">${game.homeScore}</span>
+      <span class="team ${homeWin ? "win" : ""}">${game.home}</span>
       ${finalTag}
     </div>`;
+}
+
+function renderScoreInner(pair){
+  return renderGameRow(pair.game1, "G1") + renderGameRow(pair.game2, "G2");
 }
 
 function renderHeadlineInner(it){
