@@ -106,6 +106,7 @@ html, body{
   font-weight: 600;
   font-size: 34px;
   color: var(--chalk);
+  margin: 0 3px;
   line-height: 1;
 }
 
@@ -113,6 +114,7 @@ html, body{
   font-family: 'Teko', sans-serif;
   font-size: 20px;
   color: rgba(244,239,225,.55);
+  margin: 0 6px;
 }
 
 .item .headline{
@@ -162,33 +164,22 @@ html, body{
 }
 
 .score-fit{
-  display: inline-grid;
-  grid-template-columns: auto minmax(0,max-content) max-content max-content max-content minmax(0,max-content) auto;
-  column-gap: 6px;
-  row-gap: 8px;
+  display: inline-flex;
+  flex-direction: column;
   align-items: center;
+  gap: 8px;
   white-space: nowrap;
   transform-origin: center center;
 }
 
 .score-row{
-  display: contents;
+  display: flex;
+  align-items: center;
 }
 
 .score-row.full-span{
-  display: flex;
-  grid-column: 1 / -1;
   justify-content: center;
-  align-items: center;
-  gap: 10px;
 }
-
-.game-label{ justify-self: end; }
-.team.away{ justify-self: end; text-align: right; }
-.team.home{ justify-self: start; text-align: left; }
-.score.away{ justify-self: end; }
-.score.home{ justify-self: start; }
-.at{ justify-self: center; }
 
 .game-label{
   font-family: 'Teko', sans-serif;
@@ -245,22 +236,22 @@ html, body{
 .settings-overlay.open{ display: flex; }
 
 .settings-card{
-  background: var(--navy);
-  border: 3px solid var(--gold);
+  background: #12233B;
+  border: 3px solid #F2B33D;
   border-radius: 12px;
   padding: 24px 28px;
   width: 520px;
   max-width: 90vw;
   max-height: 85vh;
   overflow-y: auto;
-  color: var(--chalk);
+  color: #F4EFE1;
 }
-.settings-card h2{ margin: 0 0 4px; font-size: 20px; color: var(--gold); }
+.settings-card h2{ margin: 0 0 4px; font-size: 20px; color: #F2B33D; }
 .settings-card p.hint{ margin: 0 0 18px; font-size: 13px; color: rgba(244,239,225,.6); line-height: 1.4; }
 .settings-section{ margin-bottom: 22px; }
 .settings-section h3{
   font-size: 13px; letter-spacing: 1px; text-transform: uppercase;
-  color: var(--gold); margin: 0 0 10px;
+  color: #F2B33D; margin: 0 0 10px;
 }
 
 .color-row{
@@ -275,7 +266,7 @@ html, body{
 .headline-row{ display: flex; gap: 6px; margin-bottom: 8px; }
 .headline-row input[type=text]{
   background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.25);
-  color: var(--chalk); border-radius: 4px; padding: 6px 8px; font-size: 13px;
+  color: #F4EFE1; border-radius: 4px; padding: 6px 8px; font-size: 13px;
   font-family: 'Baloo 2', sans-serif;
 }
 .headline-row .flag-input{ width: 76px; }
@@ -289,14 +280,14 @@ html, body{
   font-family: 'Baloo 2', sans-serif; font-weight: 700; border: none;
   border-radius: 6px; padding: 9px 16px; cursor: pointer; font-size: 13px;
 }
-.btn-gold{ background: var(--gold); color: var(--field-dark); }
-.btn-outline{ background: transparent; border: 1.5px solid rgba(244,239,225,.4); color: var(--chalk); }
+.btn-gold{ background: #F2B33D; color: #102A20; }
+.btn-outline{ background: transparent; border: 1.5px solid rgba(244,239,225,.4); color: #F4EFE1; }
 .btn-row{ display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
 
 textarea.import-export{
   width: 100%; box-sizing: border-box; height: 70px; resize: vertical;
   background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.25);
-  color: var(--chalk); border-radius: 4px; padding: 8px; font-family: monospace;
+  color: #F4EFE1; border-radius: 4px; padding: 8px; font-family: monospace;
   font-size: 11px; margin-bottom: 10px;
 }
 
@@ -510,26 +501,24 @@ function renderGameRow(game, label){
     return `
       <div class="score-row scheduled">
         <span class="game-label">${label}</span>
-        <span class="team away">${game.away}</span>
-        <span class="score-empty"></span>
+        <span class="team">${game.away}</span>
         <span class="at">@</span>
-        <span class="score-empty"></span>
-        <span class="team home">${game.home}</span>
+        <span class="team">${game.home}</span>
         <span class="scheduled-text">Not yet played</span>
       </div>`;
   }
   const awayWin = game.awayScore > game.homeScore;
   const homeWin = game.homeScore > game.awayScore;
   const showFinalTag = game.innings && game.innings !== 9;
-  const finalTag = showFinalTag ? `<span class="final-tag">F/${game.innings}</span>` : "<span></span>";
+  const finalTag = showFinalTag ? `<span class="final-tag">F/${game.innings}</span>` : "";
   return `
     <div class="score-row">
       <span class="game-label">${label}</span>
-      <span class="team away ${awayWin ? "win" : ""}">${game.away}</span>
-      <span class="score away">${game.awayScore}</span>
+      <span class="team ${awayWin ? "win" : ""}">${game.away}</span>
+      <span class="score">${game.awayScore}</span>
       <span class="at">@</span>
-      <span class="score home">${game.homeScore}</span>
-      <span class="team home ${homeWin ? "win" : ""}">${game.home}</span>
+      <span class="score">${game.homeScore}</span>
+      <span class="team ${homeWin ? "win" : ""}">${game.home}</span>
       ${finalTag}
     </div>`;
 }
