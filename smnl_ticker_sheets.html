@@ -13,6 +13,7 @@
   --chalk: #F4EFE1;
   --navy: #12233B;
   --gold: #F2B33D;
+  --greenscreen: #00FF00;
 }
 
 html, body{
@@ -22,17 +23,31 @@ html, body{
   width: 100vw; height: 100vh;
 }
 
+/* ------------------------------------------------------------
+   Stage: a fixed "design canvas" the ticker is authored at,
+   now a full 1920x1080 frame. The ticker bar sits docked to
+   the bottom; everything above it is a solid chroma-key green
+   so you can add a Chroma Key filter on this source in OBS and
+   only the ticker survives, letting you layer it over anything.
+   JS measures the real pixel box OBS gives this page (whatever
+   Width/Height you set on the Browser Source) and scales this
+   whole canvas uniformly to fit it. Set the source to exactly
+   1920x1080 to match your stream canvas 1:1.
+   ------------------------------------------------------------ */
 .stage{
   position: absolute;
   top: 0;
   left: 0;
   width: 1920px;
-  height: 92px;
+  height: 1080px;
   transform-origin: top left;
+  background: var(--greenscreen);
 }
 
 .ticker-bar{
-  position: relative;
+  position: absolute;
+  left: 0;
+  bottom: 0;
   width: 100%;
   height: 92px;
   background: linear-gradient(180deg, var(--field) 0%, var(--field-dark) 100%);
@@ -229,6 +244,13 @@ html, body{
   background: rgba(244,239,225,.25);
 }
 
+/* ------------------------------------------------------------
+   Settings panel. Lives OUTSIDE .stage on purpose, so it is
+   never affected by the ticker's scale transform - it always
+   fills the real, actual pixel viewport OBS gives this page
+   (now a full 1920x1080 frame, so there's plenty of room).
+   Toggled in-page via Shift+E; edits apply live.
+   ------------------------------------------------------------ */
 .settings-overlay{
   position: fixed;
   inset: 0;
@@ -319,7 +341,7 @@ textarea.import-export{
 <div class="settings-overlay" id="settingsOverlay">
   <div class="settings-card">
     <h2>Ticker Settings</h2>
-    <p class="hint">Press <strong>Shift+E</strong> anytime in OBS's Interact window to pop this panel out into its own comfortably-sized window. Changes save automatically. After editing, right-click the source in OBS and choose <strong>Refresh</strong> to see them on the ticker.</p>
+    <p class="hint">Press <strong>Shift+E</strong> anytime in OBS's Interact window to open or close this panel. Changes apply live and save automatically. Set the OBS Browser Source to 1920x1080, then add a <strong>Chroma Key</strong> filter on it (Custom Color, matched to the "Greenscreen" swatch below) so only the ticker bar shows over your scene.</p>
 
     <div class="settings-section">
       <h3>Colors</h3>
@@ -363,6 +385,7 @@ const THEME_META = [
   { key: "--navy",       label: "League/score box background" },
   { key: "--gold",       label: "Accent (borders, highlights)" },
   { key: "--chalk",      label: "Text color" },
+  { key: "--greenscreen",label: "Greenscreen (match your OBS Chroma Key color)" },
 ];
 
 const DEFAULT_THEME = {
@@ -371,6 +394,7 @@ const DEFAULT_THEME = {
   "--navy": "#12233B",
   "--gold": "#F2B33D",
   "--chalk": "#F4EFE1",
+  "--greenscreen": "#00FF00",
 };
 
 const DEFAULT_HEADLINES = [
@@ -385,8 +409,22 @@ const STORAGE_HEADLINES_KEY = "smnl_ticker_headlines_v1";
 let currentTheme = { ...DEFAULT_THEME };
 let currentHeadlines = [ ...DEFAULT_HEADLINES ];
 
+// ------------------------------------------------------------
+// Auto-scaling. The ticker is authored at a fixed reference
+// canvas (DESIGN_W x DESIGN_H = 1920x1080, matching a standard
+// stream canvas). Whatever pixel Width/Height you type into the
+// OBS Browser Source Properties panel, this scales the whole
+// canvas uniformly to fit that box. Set the source to exactly
+// 1920x1080 for a clean 1:1 match with your scene.
+//
+// Because the source is now a full 1920x1080 frame (ticker
+// docked at the bottom, rest filled with the greenscreen
+// color), Interact mode in OBS gives you the full canvas to
+// work with - so the settings panel (Shift+E) can just live on
+// this same page and edits apply live, no pop-up/refresh needed.
+// ------------------------------------------------------------
 const DESIGN_W = 1920;
-const DESIGN_H = 92;
+const DESIGN_H = 1080;
 const stage = document.getElementById("stage");
 
 function applyStageScale(){
@@ -396,14 +434,6 @@ function applyStageScale(){
   const offsetX = (window.innerWidth - scaledW) / 2;
   const offsetY = (window.innerHeight - scaledH) / 2;
   stage.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
-}
-
-const urlParams = new URLSearchParams(window.location.search);
-const panelOnlyMode = urlParams.get("panel") === "1";
-
-function openSettingsPopup(){
-  const url = window.location.pathname + "?panel=1";
-  return window.open(url, "smnl_ticker_settings", "width=640,height=800,resizable=yes,scrollbars=yes");
 }
 
 function loadSettingsFromStorage(){
@@ -629,6 +659,9 @@ async function loadScores(){
   startScoreCycle(scores);
 }
 
+// ------------------------------------------------------------
+// Settings panel — populate, edit, save (all live to localStorage)
+// ------------------------------------------------------------
 function escapeAttr(str){
   return String(str).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 }
@@ -714,22 +747,12 @@ document.getElementById("importBtn").addEventListener("click", () => {
   }
 });
 
-document.getElementById("closePanelBtn").addEventListener("click", () => {
-  if(panelOnlyMode){ window.close(); } else { closePanel(); }
-});
+document.getElementById("closePanelBtn").addEventListener("click", closePanel);
 overlay.addEventListener("click", e => { if(e.target === overlay) closePanel(); });
 
 window.addEventListener("keydown", e => {
   if(e.shiftKey && e.key.toLowerCase() === "e"){
-    if(panelOnlyMode){
-      togglePanel();
-    } else {
-      const popup = openSettingsPopup();
-      if(!popup){
-        // Pop-up blocked - fall back to the in-page panel.
-        togglePanel();
-      }
-    }
+    togglePanel();
   } else if(e.key === "Escape"){
     closePanel();
   }
@@ -740,21 +763,12 @@ window.addEventListener("keydown", e => {
 // ------------------------------------------------------------
 loadSettingsFromStorage();
 applyTheme();
-
-if(panelOnlyMode){
-  // This window is just the settings popup - hide the ticker
-  // itself and jump straight into the editor.
-  stage.style.display = "none";
-  document.title = "SMNL Ticker Settings";
-  openPanel();
-} else {
-  renderHeadlines(currentHeadlines.length ? currentHeadlines : [{ flag: "News", text: "You are watching SMNL Baseball" }, { flag: "Website", text: "Checkout the SMNL website at https://smnl-web.vercel.app/" }]);
-  loadScores();
-  setInterval(loadScores, REFRESH_SECONDS * 1000);
-  window.addEventListener("resize", fitScoreContent);
-  applyStageScale();
-  window.addEventListener("resize", applyStageScale);
-}
+renderHeadlines(currentHeadlines.length ? currentHeadlines : [{ flag: "News", text: "You are watching SMNL Baseball" }, { flag: "Website", text: "Checkout the SMNL website at https://smnl-web.vercel.app/" }]);
+loadScores();
+setInterval(loadScores, REFRESH_SECONDS * 1000);
+window.addEventListener("resize", fitScoreContent);
+applyStageScale();
+window.addEventListener("resize", applyStageScale);
 
 </script>
 </body>
