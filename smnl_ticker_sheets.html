@@ -24,19 +24,22 @@ html, body{
 }
 
 .stage{
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 1920px;
-  height: 1080px;
-  transform-origin: top left;
+  position: fixed;
+  inset: 0;
   background: var(--greenscreen);
 }
 
-.ticker-bar{
+.ticker-wrap{
   position: absolute;
   left: 0;
   bottom: 0;
+  width: 1920px;
+  height: 92px;
+  transform-origin: bottom left;
+}
+
+.ticker-bar{
+  position: relative;
   width: 100%;
   height: 92px;
   background: linear-gradient(180deg, var(--field) 0%, var(--field-dark) 100%);
@@ -306,16 +309,18 @@ textarea.import-export{
 <body>
 
 <div class="stage" id="stage">
-  <div class="ticker-bar">
-    <div class="league-tag">
-      <div class="name" id="leagueName">SMNL</div>
-      <div class="sub">SMNL &middot; SMB4</div>
-    </div>
-    <div class="score-box" id="scoreBox">
-      <div class="score-slide" id="scoreSlide"></div>
-    </div>
-    <div class="track-wrap">
-      <div class="track" id="track"></div>
+  <div class="ticker-wrap" id="tickerWrap">
+    <div class="ticker-bar">
+      <div class="league-tag">
+        <div class="name" id="leagueName">SMNL</div>
+        <div class="sub">SMNL &middot; SMB4</div>
+      </div>
+      <div class="score-box" id="scoreBox">
+        <div class="score-slide" id="scoreSlide"></div>
+      </div>
+      <div class="track-wrap">
+        <div class="track" id="track"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -386,16 +391,11 @@ let currentTheme = { ...DEFAULT_THEME };
 let currentHeadlines = [ ...DEFAULT_HEADLINES ];
 
 const DESIGN_W = 1920;
-const DESIGN_H = 1080;
-const stage = document.getElementById("stage");
+const tickerWrap = document.getElementById("tickerWrap");
 
-function applyStageScale(){
-  const scale = Math.min(window.innerWidth / DESIGN_W, window.innerHeight / DESIGN_H);
-  const scaledW = DESIGN_W * scale;
-  const scaledH = DESIGN_H * scale;
-  const offsetX = (window.innerWidth - scaledW) / 2;
-  const offsetY = (window.innerHeight - scaledH) / 2;
-  stage.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+function applyTickerScale(){
+  const scale = window.innerWidth / DESIGN_W;
+  tickerWrap.style.transform = `scale(${scale})`;
 }
 
 function loadSettingsFromStorage(){
@@ -717,14 +717,17 @@ window.addEventListener("keydown", e => {
   }
 });
 
+// ------------------------------------------------------------
+// Init
+// ------------------------------------------------------------
 loadSettingsFromStorage();
 applyTheme();
 renderHeadlines(currentHeadlines.length ? currentHeadlines : [{ flag: "News", text: "You are watching SMNL Baseball" }, { flag: "Website", text: "Checkout the SMNL website at https://smnl-web.vercel.app/" }]);
 loadScores();
 setInterval(loadScores, REFRESH_SECONDS * 1000);
 window.addEventListener("resize", fitScoreContent);
-applyStageScale();
-window.addEventListener("resize", applyStageScale);
+applyTickerScale();
+window.addEventListener("resize", applyTickerScale);
 
 </script>
 </body>
