@@ -22,6 +22,15 @@ html, body{
   width: 100vw; height: 100vh;
 }
 
+.stage{
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1920px;
+  height: 92px;
+  transform-origin: top left;
+}
+
 .ticker-bar{
   position: relative;
   width: 100%;
@@ -220,9 +229,6 @@ html, body{
   background: rgba(244,239,225,.25);
 }
 
-/* ------------------------------------------------------------
-   Settings panel — hidden until Shift+E is pressed.
-   ------------------------------------------------------------ */
 .settings-overlay{
   position: fixed;
   inset: 0;
@@ -295,23 +301,25 @@ textarea.import-export{
 </head>
 <body>
 
-<div class="ticker-bar">
-  <div class="league-tag">
-    <div class="name" id="leagueName">SMNL</div>
-    <div class="sub">SMNL &middot; SMB4</div>
-  </div>
-  <div class="score-box" id="scoreBox">
-    <div class="score-slide" id="scoreSlide"></div>
-  </div>
-  <div class="track-wrap">
-    <div class="track" id="track"></div>
+<div class="stage" id="stage">
+  <div class="ticker-bar">
+    <div class="league-tag">
+      <div class="name" id="leagueName">SMNL</div>
+      <div class="sub">SMNL &middot; SMB4</div>
+    </div>
+    <div class="score-box" id="scoreBox">
+      <div class="score-slide" id="scoreSlide"></div>
+    </div>
+    <div class="track-wrap">
+      <div class="track" id="track"></div>
+    </div>
   </div>
 </div>
 
 <div class="settings-overlay" id="settingsOverlay">
   <div class="settings-card">
     <h2>Ticker Settings</h2>
-    <p class="hint">Press <strong>Shift+E</strong> anytime to open or close this panel. Changes save automatically to this browser source and apply immediately.</p>
+    <p class="hint">Press <strong>Shift+E</strong> anytime in OBS's Interact window to pop this panel out into its own comfortably-sized window. Changes save automatically. After editing, right-click the source in OBS and choose <strong>Refresh</strong> to see them on the ticker.</p>
 
     <div class="settings-section">
       <h3>Colors</h3>
@@ -376,6 +384,27 @@ const STORAGE_HEADLINES_KEY = "smnl_ticker_headlines_v1";
 
 let currentTheme = { ...DEFAULT_THEME };
 let currentHeadlines = [ ...DEFAULT_HEADLINES ];
+
+const DESIGN_W = 1920;
+const DESIGN_H = 92;
+const stage = document.getElementById("stage");
+
+function applyStageScale(){
+  const scale = Math.min(window.innerWidth / DESIGN_W, window.innerHeight / DESIGN_H);
+  const scaledW = DESIGN_W * scale;
+  const scaledH = DESIGN_H * scale;
+  const offsetX = (window.innerWidth - scaledW) / 2;
+  const offsetY = (window.innerHeight - scaledH) / 2;
+  stage.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+}
+
+const urlParams = new URLSearchParams(window.location.search);
+const panelOnlyMode = urlParams.get("panel") === "1";
+
+function openSettingsPopup(){
+  const url = window.location.pathname + "?panel=1";
+  return window.open(url, "smnl_ticker_settings", "width=640,height=800,resizable=yes,scrollbars=yes");
+}
 
 function loadSettingsFromStorage(){
   try{
@@ -600,9 +629,6 @@ async function loadScores(){
   startScoreCycle(scores);
 }
 
-// ------------------------------------------------------------
-// Settings panel — populate, edit, save (all live to localStorage)
-// ------------------------------------------------------------
 function escapeAttr(str){
   return String(str).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 }
@@ -688,12 +714,22 @@ document.getElementById("importBtn").addEventListener("click", () => {
   }
 });
 
-document.getElementById("closePanelBtn").addEventListener("click", closePanel);
+document.getElementById("closePanelBtn").addEventListener("click", () => {
+  if(panelOnlyMode){ window.close(); } else { closePanel(); }
+});
 overlay.addEventListener("click", e => { if(e.target === overlay) closePanel(); });
 
 window.addEventListener("keydown", e => {
   if(e.shiftKey && e.key.toLowerCase() === "e"){
-    togglePanel();
+    if(panelOnlyMode){
+      togglePanel();
+    } else {
+      const popup = openSettingsPopup();
+      if(!popup){
+        // Pop-up blocked - fall back to the in-page panel.
+        togglePanel();
+      }
+    }
   } else if(e.key === "Escape"){
     closePanel();
   }
@@ -704,10 +740,21 @@ window.addEventListener("keydown", e => {
 // ------------------------------------------------------------
 loadSettingsFromStorage();
 applyTheme();
-renderHeadlines(currentHeadlines.length ? currentHeadlines : [{ flag: "News", text: "You are watching SMNL Baseball" }, { flag: "Website", text: "Checkout the SMNL website at https://smnl-web.vercel.app/" }]);
-loadScores();
-setInterval(loadScores, REFRESH_SECONDS * 1000);
-window.addEventListener("resize", fitScoreContent);
+
+if(panelOnlyMode){
+  // This window is just the settings popup - hide the ticker
+  // itself and jump straight into the editor.
+  stage.style.display = "none";
+  document.title = "SMNL Ticker Settings";
+  openPanel();
+} else {
+  renderHeadlines(currentHeadlines.length ? currentHeadlines : [{ flag: "News", text: "You are watching SMNL Baseball" }, { flag: "Website", text: "Checkout the SMNL website at https://smnl-web.vercel.app/" }]);
+  loadScores();
+  setInterval(loadScores, REFRESH_SECONDS * 1000);
+  window.addEventListener("resize", fitScoreContent);
+  applyStageScale();
+  window.addEventListener("resize", applyStageScale);
+}
 
 </script>
 </body>
