@@ -1,6 +1,6 @@
 // ============================================================
 // SETTINGS PANEL
-// The Shift+E overlay: color pickers (backed by THEME_META /
+// The click-to-open overlay: color pickers (backed by THEME_META /
 // currentTheme from config.js/state.js), headline rows (backed
 // by currentHeadlines), and the Import/Export text box for
 // copying settings between machines. Everything here writes
@@ -74,9 +74,6 @@ function openPanel() {
 function closePanel() {
   overlay.classList.remove("open");
 }
-function togglePanel() {
-  overlay.classList.contains("open") ? closePanel() : openPanel();
-}
 
 document.getElementById("addHeadlineBtn").addEventListener("click", () => {
   currentHeadlines.push({ flag: "", text: "" });
@@ -120,6 +117,3 @@ document.getElementById("importBtn").addEventListener("click", () => {
 });
 
 document.getElementById("closePanelBtn").addEventListener("click", closePanel);
-overlay.addEventListener("click", (e) => {
-  if (e.target === overlay) closePanel();
-});

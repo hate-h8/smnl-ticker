@@ -2,7 +2,8 @@
 
 /* ============================================================
    THEME VARIABLES
-   Edited live from the Settings panel (Shift+E) - see
+   Edited live from the Settings panel (click anywhere to open) -
+   see
    js/config.js THEME_META for which ones show up as color
    pickers, and js/state.js for how edits get applied here.
    ============================================================ */
@@ -264,7 +265,7 @@ html, body{
 }
 
 /* ============================================================
-   SETTINGS PANEL (Shift+E)
+   SETTINGS PANEL (click anywhere to open, Done to close)
    Built/populated by js/settings-panel.js.
    ============================================================ */
 .settings-overlay{

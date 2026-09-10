@@ -9,10 +9,6 @@ applyTickerScale();
 window.addEventListener("resize", fitScoreContent);
 window.addEventListener("resize", applyTickerScale);
 
-window.addEventListener("keydown", (e) => {
-  if (e.shiftKey && e.key.toLowerCase() === "e") {
-    togglePanel();
-  } else if (e.key === "Escape") {
-    closePanel();
-  }
+stage.addEventListener("click", () => {
+  if (!overlay.classList.contains("open")) openPanel();
 });
