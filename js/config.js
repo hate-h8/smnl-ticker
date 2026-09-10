@@ -23,7 +23,7 @@ const DEFAULT_THEME = {
   "--headline-bg-top": "#12233B",
   "--headline-bg-bottom": "#12233B",
   "--box-bg": "#921606",
-  "--accent": "#E2B22C",S
+  "--accent": "#E2B22C",
   "--text": "#FFFFFF",
   "--greenscreen": "#00FF00",
 };
