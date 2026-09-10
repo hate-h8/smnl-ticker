@@ -22,7 +22,7 @@ const THEME_META = [
 const DEFAULT_THEME = {
   "--headline-bg-top": "#12233B",
   "--headline-bg-bottom": "#12233B",
-  "--box-bg": "#FE285B",
+  "--box-bg": "#ba1c07",
   "--accent": "#E2B22C",
   "--text": "#FFFFFF",
   "--greenscreen": "#00FF00",
