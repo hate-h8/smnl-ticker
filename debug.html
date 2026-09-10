@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SMNL Ticker — API Debug</title>
+<style>
+  body { font-family: 'SF Mono', Consolas, monospace; background:#0d1117; color:#c9d1d9; padding: 24px; max-width: 900px; margin: 0 auto; }
+  h1 { color:#58a6ff; font-size: 20px; }
+  h2 { color:#8b949e; font-size: 14px; text-transform: uppercase; letter-spacing: .5px; margin-top: 28px; }
+  p.intro { color:#8b949e; font-size: 13px; line-height: 1.5; }
+  button { background:#238636; color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-family: inherit; font-size:14px; }
+  button:hover { background:#2ea043; }
+  #timing { color:#8b949e; font-size: 12px; margin-left: 8px; }
+  .status { padding: 10px 14px; border-radius: 6px; margin: 14px 0; font-size: 14px; }
+  .status.ok { background:#0d2818; border:1px solid #238636; color:#7ee787; }
+  .status.err { background:#2d0d0d; border:1px solid #da3633; color:#ff7b72; }
+  .status.pending { background:#1c2333; border:1px solid #58a6ff; color:#79c0ff; }
+  pre { background:#161b22; padding:14px; border-radius:6px; overflow-x:auto; border:1px solid #30363d; font-size: 12px; }
+  .pair { border:1px solid #30363d; border-radius:6px; padding:10px 14px; margin-bottom:8px; font-size: 13px; }
+  .pair-header { color:#58a6ff; font-weight:bold; margin-bottom:6px; }
+  .row { padding:3px 0; }
+  .row.missing { color:#8b949e; font-style: italic; }
+</style>
+</head>
+<body>
+
+<h1>SMNL Ticker — API Debug</h1>
+<p class="intro">
+  This page loads the same <code>js/config.js</code> and <code>js/scores.js</code> the live ticker
+  uses, and calls the real <code>fetchRecentGames()</code> / <code>groupIntoPairs()</code> functions
+  directly - not a copy of the logic. If this page comes back clean, the data layer is fine and any
+  problem is in the ticker's rendering; if this page fails, the problem is the query/API/credentials,
+  independent of anything OBS-related.
+</p>
+
+<button id="runBtn">Run test fetch</button><span id="timing"></span>
+
+<div id="statusBox"></div>
+
+<h2>Grouped into pairs (what the ticker actually cycles through)</h2>
+<div id="pairsOutput">(not run yet)</div>
+
+<h2>Raw rows returned</h2>
+<pre id="rawOutput">(not run yet)</pre>
+
+<!-- Deliberately reusing the real files, not duplicating logic here.
+     Note: scores.js also does a few document.getElementById() calls
+     for ticker elements that don't exist on this page - those just
+     resolve to null, which is harmless as long as we never call the
+     ticker-rendering functions (showScore/startScoreCycle/etc) that
+     would need them. This page only calls fetchRecentGames() and
+     groupIntoPairs(), so that's fine. -->
+<script src="js/config.js"></script>
+<script src="js/scores.js"></script>
+<script>
+const runBtn = document.getElementById("runBtn");
+const statusBox = document.getElementById("statusBox");
+const rawOutput = document.getElementById("rawOutput");
+const pairsOutput = document.getElementById("pairsOutput");
+const timingEl = document.getElementById("timing");
+
+function setStatus(kind, text) {
+  statusBox.innerHTML = `<div class="status ${kind}">${text}</div>`;
+}
+
+function renderPairSummary(game, label) {
+  if (!game) return `<div class="row missing">${label}: no second game in this fetch window (may or may not exist/be played - see groupIntoPairs comment in scores.js)</div>`;
+  const tag = game.innings && game.innings !== 9 ? ` (F/${game.innings})` : "";
+  return `<div class="row">${label}: ${game.away} ${game.awayScore} @ ${game.homeScore} ${game.home}${tag} — id ${game.id}, finalized ${game.finalizedAt}</div>`;
+}
+
+async function runTest() {
+  setStatus("pending", "Fetching…");
+  rawOutput.textContent = "(loading)";
+  pairsOutput.textContent = "(loading)";
+  timingEl.textContent = "";
+  const start = performance.now();
+
+  try {
+    const games = await fetchRecentGames();
+    const elapsed = Math.round(performance.now() - start);
+    timingEl.textContent = `(${elapsed}ms)`;
+    setStatus("ok", `✓ Success — received ${games.length} finalized game row(s).`);
+    rawOutput.textContent = JSON.stringify(games, null, 2);
+
+    const pairs = groupIntoPairs(games);
+    pairsOutput.innerHTML = pairs.length
+      ? pairs
+          .map(
+            (p) => `
+        <div class="pair">
+          <div class="pair-header">${p.league || "(no league name)"} — Week ${p.week}</div>
+          ${renderPairSummary(p.game1, "G1")}
+          ${renderPairSummary(p.game2, "G2")}
+        </div>`
+          )
+          .join("")
+      : "<p>No pairs formed from these rows.</p>";
+  } catch (err) {
+    const elapsed = Math.round(performance.now() - start);
+    timingEl.textContent = `(${elapsed}ms)`;
+    setStatus("err", `✗ Failed — ${err.message}`);
+    rawOutput.textContent = String(err.stack || err);
+    pairsOutput.textContent = "(fetch failed, nothing to group)";
+    console.error(err);
+  }
+}
+
+runBtn.addEventListener("click", runTest);
+// Also run once automatically, so you can just open the page and see results.
+runTest();
+</script>
+</body>
+</html>

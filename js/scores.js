@@ -1,9 +1,10 @@
 // ============================================================
 // SCORES
-// Pulls recent game results from Supabase for each league in
-// LEAGUES (config.js), pairs them up (the two games played per
-// week between the same two teams), and cycles through them in
-// the score box on the left. Also owns fitScoreContent(), which
+// Pulls the most recent FINALIZED games from Supabase (across
+// all real, non-test leagues - filtering happens server-side)
+// and pairs them up client-side (the two games played per week
+// between the same two teams), cycling through them in the
+// score box on the left. Also owns fitScoreContent(), which
 // shrinks/grows the score text to fit the box regardless of
 // team name length.
 // ============================================================
@@ -16,17 +17,22 @@ let scoreItems = [];
 let scoreIndex = 0;
 let scoreTimer = null;
 
-// Fetches one league's recent games from Supabase and groups them
-// into "pairs" (the two games played in a given week between the
-// same two teams), keeping only pairs where at least one game is
-// final (so upcoming-only matchups don't clutter the rotation).
-async function fetchLeagueGames(league) {
+// Fetches the RESULTS_LIMIT most recently finalized games across
+// every non-test league, and normalizes each row into the shape
+// the rest of this file works with.
+async function fetchRecentGames() {
   const params = new URLSearchParams({
     select:
-      "week,game_number,status,innings,home_team:teams!home_team_id(id,name),away_team:teams!away_team_id(id,name),lines:game_team_stats(is_home,runs)",
-    season_id: `eq.${league.seasonId}`,
-    order: "week.desc,game_number.desc",
-    limit: String(PAIRS_PER_LEAGUE * 3),
+      "id,week,innings,finalized_at,home_team_id,away_team_id," +
+      "seasons!inner(number,leagues!inner(name,slug,is_test))," +
+      "home:teams!home_team_id(name,abbrev,owner:users!owner_id(display_name,handle))," +
+      "away:teams!away_team_id(name,abbrev,owner:users!owner_id(display_name,handle))," +
+      "game_team_stats(team_id,runs)",
+    status: "eq.final",
+    finalized_at: "not.is.null",
+    "seasons.leagues.is_test": "eq.false",
+    order: "finalized_at.desc",
+    limit: String(RESULTS_LIMIT),
   });
   const url = `${SUPABASE_URL}/rest/v1/games?${params.toString()}`;
   const res = await fetch(url, {
@@ -38,26 +44,40 @@ async function fetchLeagueGames(league) {
   if (!res.ok) throw new Error(`Supabase request failed: ${res.status}`);
   const rows = await res.json();
 
-  const games = rows.map((g) => {
-    const homeLine = (g.lines || []).find((l) => l.is_home);
-    const awayLine = (g.lines || []).find((l) => !l.is_home);
+  return rows.map((g) => {
+    const stats = g.game_team_stats || [];
+    const homeLine = stats.find((l) => l.team_id === g.home_team_id);
+    const awayLine = stats.find((l) => l.team_id === g.away_team_id);
     return {
+      id: g.id,
       week: g.week,
-      gameNumber: g.game_number,
-      isFinal: g.status === "final",
       innings: g.innings,
-      homeTeamId: g.home_team ? g.home_team.id : null,
-      awayTeamId: g.away_team ? g.away_team.id : null,
-      home: g.home_team ? g.home_team.name : "Home",
-      away: g.away_team ? g.away_team.name : "Away",
+      finalizedAt: g.finalized_at,
+      league: g.seasons && g.seasons.leagues ? g.seasons.leagues.name : null,
+      homeTeamId: g.home_team_id,
+      awayTeamId: g.away_team_id,
+      home: g.home ? g.home.name : "Home",
+      away: g.away ? g.away.name : "Away",
       homeScore: homeLine ? homeLine.runs : null,
       awayScore: awayLine ? awayLine.runs : null,
     };
   });
+}
 
+// Groups a flat list of finalized games into "pairs" - the (up
+// to) two games played in a given week between the same two
+// teams - sorted most recent first. A "pair" with only one game
+// is rendered as a single row (see renderScoreInner) rather than
+// guessing the second is "not yet played": since this query only
+// ever returns already-finalized games, a missing second game
+// might genuinely not exist yet, OR might have been played and
+// finalized but simply fallen outside this fetch's RESULTS_LIMIT
+// window (config.js) - we have no way to tell those apart, so we
+// don't claim either one.
+function groupIntoPairs(games) {
   const groups = new Map();
   games.forEach((g) => {
-    if (g.homeTeamId === null || g.awayTeamId === null) return;
+    if (g.homeTeamId == null || g.awayTeamId == null) return;
     const ids = [g.homeTeamId, g.awayTeamId].sort((a, b) => a - b);
     const key = `${g.week}:${ids[0]}-${ids[1]}`;
     if (!groups.has(key)) groups.set(key, []);
@@ -66,62 +86,33 @@ async function fetchLeagueGames(league) {
 
   const pairs = [];
   groups.forEach((arr) => {
-    arr.sort((a, b) => a.gameNumber - b.gameNumber);
-    if (!arr.some((g) => g.isFinal)) return;
+    arr.sort((a, b) => a.id - b.id); // stand-in for game order, see file header
     pairs.push({
-      type: "score",
-      league: league.label,
+      league: arr[0].league,
       week: arr[0].week,
-      maxGameNumber: Math.max(...arr.map((g) => g.gameNumber)),
+      latestFinalizedAt: Math.max(...arr.map((g) => Date.parse(g.finalizedAt))),
       game1: arr[0] || null,
       game2: arr[1] || null,
     });
   });
 
+  pairs.sort((a, b) => b.latestFinalizedAt - a.latestFinalizedAt);
   return pairs;
 }
 
-// Fetches all leagues in parallel and merges/sorts the results,
-// most recent week first. A failed league is logged and skipped
-// rather than blocking the others.
-async function fetchAllScores() {
-  const results = await Promise.allSettled(LEAGUES.map(fetchLeagueGames));
-  const pairs = [];
-  results.forEach((r) => {
-    if (r.status === "fulfilled") pairs.push(...r.value);
-    else console.error("Failed to load scores for a league:", r.reason);
-  });
-  pairs.sort((a, b) => b.week - a.week || b.maxGameNumber - a.maxGameNumber);
-  return pairs.slice(0, PAIRS_PER_LEAGUE * LEAGUES.length);
-}
-
-// Renders a single game line ("G1"/"G2") - handles the
-// not-yet-played and final states, and the extra-innings tag.
+// Renders a single game line. `label` ("G1"/"G2") is only shown
+// when there's a second game to disambiguate from - a solo game
+// gets no label at all, see renderScoreInner.
 function renderGameRow(game, label) {
-  if (!game) {
-    return `
-      <div class="score-row scheduled full-span">
-        <span class="game-label">${label}</span>
-        <span class="scheduled-text">Not yet played</span>
-      </div>`;
-  }
-  if (!game.isFinal) {
-    return `
-      <div class="score-row scheduled">
-        <span class="game-label">${label}</span>
-        <span class="team">${game.away}</span>
-        <span class="at">@</span>
-        <span class="team">${game.home}</span>
-        <span class="scheduled-text">Not yet played</span>
-      </div>`;
-  }
+  if (!game) return "";
   const awayWin = game.awayScore > game.homeScore;
   const homeWin = game.homeScore > game.awayScore;
   const showFinalTag = game.innings && game.innings !== 9;
   const finalTag = showFinalTag ? `<span class="final-tag">F/${game.innings}</span>` : "";
+  const labelHtml = label ? `<span class="game-label">${label}</span>` : "";
   return `
     <div class="score-row">
-      <span class="game-label">${label}</span>
+      ${labelHtml}
       <span class="team ${awayWin ? "win" : ""}">${game.away}</span>
       <span class="score">${game.awayScore}</span>
       <span class="at">@</span>
@@ -131,8 +122,13 @@ function renderGameRow(game, label) {
     </div>`;
 }
 
+// Two real games -> both rows, labeled G1/G2. Only one -> a single
+// unlabeled row, sized on its own
 function renderScoreInner(pair) {
-  return renderGameRow(pair.game1, "G1") + renderGameRow(pair.game2, "G2");
+  if (pair.game2) {
+    return renderGameRow(pair.game1, "G1") + renderGameRow(pair.game2, "G2");
+  }
+  return renderGameRow(pair.game1, null);
 }
 
 // Shrinks/grows the score box's content so long team names still
@@ -184,9 +180,9 @@ function startScoreCycle(items) {
 // Fetches fresh scores from Supabase and restarts the cycle.
 // Called once on load and then every REFRESH_SECONDS.
 async function loadScores() {
-  const scores = await fetchAllScores().catch((err) => {
+  const games = await fetchRecentGames().catch((err) => {
     console.error("Failed to load scores:", err);
     return [];
   });
-  startScoreCycle(scores);
+  startScoreCycle(groupIntoPairs(games));
 }

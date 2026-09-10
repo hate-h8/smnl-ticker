@@ -41,18 +41,13 @@ const STORAGE_HEADLINES_KEY = "smnl_ticker_headlines_v1";
 
 // ---- Supabase (scores backend) -----------------------------------
 const SUPABASE_URL = "https://hhjmginyyvcrngvcnhdb.supabase.co";
-const SUPABASE_API_KEY = "sb_publishable_JSBxFG27P4j44Ou1ivP3gw_oSBm-AVs";
-
-// One entry per league/season shown in the score box rotation.
-const LEAGUES = [
-  { seasonId: 5, label: "PRO" },
-  { seasonId: 6, label: "ALL-STAR" },
-  { seasonId: 7, label: "LEGENDARY" },
-];
+const SUPABASE_ANON_KEY = "sb_publishable_JSBxFG27P4j44Ou1ivP3gw_oSBm-AVs";
 
 // ---- Timing knobs ---------------------------------------------------
-const PAIRS_PER_LEAGUE = 24;        // max score pairs kept per league
-const REFRESH_SECONDS = 86400;         // how often scores re-fetch from Supabase
+// How many recently-finalized games to fetch in one request (across
+// all leagues combined
+const RESULTS_LIMIT = 120;
+const REFRESH_SECONDS = 86400;      // how often scores re-fetch from Supabase
 const SCROLL_SECONDS = 45;          // how long one full headline scroll loop takes
 const SCORE_INTERVAL_SECONDS = 10;  // how long each score pair displays before cycling
 
