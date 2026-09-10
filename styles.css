@@ -1,0 +1,336 @@
+@import url('https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Baloo+2:wght@600;700&display=swap');
+
+/* ============================================================
+   THEME VARIABLES
+   Edited live from the Settings panel (Shift+E) - see
+   js/config.js THEME_META for which ones show up as color
+   pickers, and js/state.js for how edits get applied here.
+   ============================================================ */
+:root{
+  --headline-bg-top: #12233B;
+  --headline-bg-bottom: #12233B;
+  --text: #FFFFFF;
+  --box-bg: #FE285B;
+  --accent: #E2B22C;
+  --greenscreen: #00FF00;
+}
+
+/* ============================================================
+   BASE / RESET
+   ============================================================ */
+html, body{
+  margin:0; padding:0;
+  background: transparent;
+  overflow: hidden;
+  width: 100vw; height: 100vh;
+}
+
+/* ============================================================
+   STAGE & GREENSCREEN BACKDROP
+   Fills the actual display/OBS source, whatever size that is.
+   Add a Chroma Key filter on the OBS source (matched to
+   --greenscreen) so only the ticker bar below survives.
+   ============================================================ */
+.stage{
+  position: fixed;
+  inset: 0;
+  background: var(--greenscreen);
+}
+
+/* ============================================================
+   TICKER WRAP - scaling anchor
+   Authored at a fixed 1920px design width (js/scaling.js
+   DESIGN_W) and scaled via JS transform to match the real
+   display width, anchored bottom-left so it always sits flush
+   with the bottom of the screen.
+   ============================================================ */
+.ticker-wrap{
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 1920px;
+  height: 92px;
+  transform-origin: bottom left;
+}
+
+.ticker-bar{
+  position: relative;
+  width: 100%;
+  height: 92px;
+  background: linear-gradient(180deg, var(--headline-bg-top) 0%, var(--headline-bg-bottom) 100%);
+  border-top: 4px solid var(--accent);
+  border-bottom: 4px solid var(--accent);
+  display: flex;
+  align-items: center;
+  box-shadow: 0 4px 18px rgba(0,0,0,.35);
+}
+
+/* ============================================================
+   LEAGUE TAG (left box)
+   ============================================================ */
+.league-tag{
+  flex: 0 0 auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 0 28px;
+  background: var(--box-bg);
+  border-right: 4px solid var(--accent);
+  z-index: 2;
+}
+.league-tag .name{
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--text);
+  letter-spacing: .5px;
+  white-space: nowrap;
+}
+.league-tag .sub{
+  font-family: 'Teko', sans-serif;
+  font-weight: 500;
+  font-size: 15px;
+  color: var(--accent);
+  letter-spacing: 2px;
+  white-space: nowrap;
+  margin-top: -2px;
+}
+
+/* ============================================================
+   SCROLLING HEADLINES TRACK
+   .track's content is rendered twice back-to-back by
+   js/headlines.js so this marquee animation loops seamlessly.
+   ============================================================ */
+.track-wrap{
+  flex: 1 1 auto;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.track{
+  display: flex;
+  align-items: center;
+  height: 100%;
+  width: max-content;
+  animation: scroll-left var(--duration, 45s) linear infinite;
+}
+
+@keyframes scroll-left{
+  from{ transform: translateX(0); }
+  to{ transform: translateX(-50%); }
+}
+
+.item{
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 34px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.team{
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 700;
+  font-size: 21px;
+  color: var(--text);
+}
+.team.win{ color: var(--accent); }
+
+.score{
+  font-family: 'Teko', sans-serif;
+  font-weight: 600;
+  font-size: 34px;
+  color: var(--text);
+  margin: 0 3px;
+  line-height: 1;
+}
+
+.at{
+  font-family: 'Teko', sans-serif;
+  font-size: 20px;
+  color: rgba(244,239,225,.55);
+  margin: 0 6px;
+}
+
+.item .headline{
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 600;
+  font-size: 19px;
+  color: var(--text);
+}
+.item .headline .flag{
+  color: var(--accent);
+  font-weight: 700;
+  margin-right: 10px;
+}
+
+.final-tag{
+  font-family: 'Teko', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--headline-bg-bottom);
+  background: var(--accent);
+  padding: 3px 9px 1px;
+  border-radius: 4px;
+  margin-left: 12px;
+  letter-spacing: .5px;
+}
+
+.divider{
+  flex: 0 0 auto;
+  width: 2px;
+  height: 34px;
+  margin: 0 26px;
+  background: rgba(244,239,225,.25);
+}
+
+/* ============================================================
+   SCORE BOX (right box, cycling scores)
+   Rendered/rotated by js/scores.js.
+   ============================================================ */
+.score-box{
+  flex: 0 0 auto;
+  width: 620px;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  background: var(--box-bg);
+  border-right: 4px solid var(--accent);
+  z-index: 2;
+}
+
+.score-slide{
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 22px;
+  box-sizing: border-box;
+}
+
+.score-fit{
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  transform-origin: center center;
+}
+
+.score-row{
+  display: flex;
+  align-items: center;
+}
+
+.score-row.full-span{
+  justify-content: center;
+}
+
+.game-label{
+  font-family: 'Teko', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--accent);
+  margin-right: 10px;
+  letter-spacing: 1px;
+}
+
+.score-row.scheduled{
+  opacity: .7;
+}
+
+.scheduled-text{
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  font-style: italic;
+  color: rgba(244,239,225,.55);
+  margin-left: 10px;
+}
+
+@keyframes score-enter{
+  from{ transform: translateY(100%); opacity: 0; }
+  to{ transform: translateY(0); opacity: 1; }
+}
+
+.score-slide.enter{
+  animation: score-enter .55s cubic-bezier(.2,.8,.3,1);
+}
+
+/* ============================================================
+   SETTINGS PANEL (Shift+E)
+   Built/populated by js/settings-panel.js.
+   ============================================================ */
+.settings-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.75);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  font-family: 'Baloo 2', sans-serif;
+}
+.settings-overlay.open{ display: flex; }
+
+.settings-card{
+  background: #12233B;
+  border: 3px solid #E2B22C;
+  border-radius: 12px;
+  padding: 24px 28px;
+  width: 520px;
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow-y: auto;
+  color: #FFFFFF;
+}
+.settings-card h2{ margin: 0 0 4px; font-size: 20px; color: #E2B22C; }
+.settings-card p.hint{ margin: 0 0 18px; font-size: 13px; color: rgba(255,255,255,.7); line-height: 1.4; }
+.settings-section{ margin-bottom: 22px; }
+.settings-section h3{
+  font-size: 13px; letter-spacing: 1px; text-transform: uppercase;
+  color: #E2B22C; margin: 0 0 10px;
+}
+
+.color-row{
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px; font-size: 14px;
+}
+.color-row input[type=color]{
+  width: 44px; height: 28px; border: none; border-radius: 4px;
+  cursor: pointer; background: none; padding: 0;
+}
+
+.headline-row{ display: flex; gap: 6px; margin-bottom: 8px; }
+.headline-row input[type=text]{
+  background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.35);
+  color: #FFFFFF; border-radius: 4px; padding: 6px 8px; font-size: 13px;
+  font-family: 'Baloo 2', sans-serif;
+}
+.headline-row .flag-input{ width: 76px; }
+.headline-row .text-input{ flex: 1; }
+.headline-row button{
+  background: #FE285B; border: none; color: #FFFFFF; border-radius: 4px;
+  width: 30px; cursor: pointer; font-weight: 700; font-size: 15px;
+}
+
+.btn{
+  font-family: 'Baloo 2', sans-serif; font-weight: 700; border: none;
+  border-radius: 6px; padding: 9px 16px; cursor: pointer; font-size: 13px;
+}
+.btn-gold{ background: #E2B22C; color: #FFFFFF; }
+.btn-outline{ background: transparent; border: 1.5px solid rgba(255,255,255,.5); color: #FFFFFF; }
+.btn-row{ display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+
+textarea.import-export{
+  width: 100%; box-sizing: border-box; height: 70px; resize: vertical;
+  background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.35);
+  color: #FFFFFF; border-radius: 4px; padding: 8px; font-family: monospace;
+  font-size: 11px; margin-bottom: 10px;
+}

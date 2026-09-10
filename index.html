@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SMNL League Ticker — Scores & Headlines</title>
+
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="stage" id="stage">
+  <div class="ticker-wrap" id="tickerWrap">
+    <div class="ticker-bar">
+      <div class="league-tag">
+        <div class="name" id="leagueName">SMNL</div>
+        <div class="sub">SMNL &middot; SMB4</div>
+      </div>
+      <div class="score-box" id="scoreBox">
+        <div class="score-slide" id="scoreSlide"></div>
+      </div>
+      <div class="track-wrap">
+        <div class="track" id="track"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="settings-overlay" id="settingsOverlay">
+  <div class="settings-card">
+    <h2>Ticker Settings</h2>
+    <p class="hint">Press <strong>Shift+E</strong> anytime in OBS's Interact window to open or close this panel. Changes apply live and save automatically. Set the OBS Browser Source to match your canvas resolution, then add a <strong>Chroma Key</strong> filter on it (Custom Color, matched to the "Greenscreen" swatch below) so only the ticker bar shows over your scene.</p>
+
+    <div class="settings-section">
+      <h3>Colors</h3>
+      <div id="colorRows"></div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Headlines</h3>
+      <div id="headlineRows"></div>
+      <button class="btn btn-outline" id="addHeadlineBtn" type="button">+ Add headline</button>
+    </div>
+
+    <div class="settings-section">
+      <h3>Transfer</h3>
+      <p class="hint">When you are done editing the colors (outside of OBS), open this modal again in OBS, then paste it in the box, then select Load.</p>
+      <textarea class="import-export" id="importExportBox" placeholder="Click 'Copy current settings' to fill this in"></textarea>
+      <div class="btn-row">
+        <button class="btn btn-outline" id="exportBtn" type="button">Copy current settings</button>
+        <button class="btn btn-outline" id="importBtn" type="button">Load settings above</button>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-gold" id="closePanelBtn" type="button">Done</button>
+      <button class="btn btn-outline" id="resetBtn" type="button">Reset to defaults</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/state.js"></script>
+<script src="js/scaling.js"></script>
+<script src="js/scores.js"></script>
+<script src="js/headlines.js"></script>
+<script src="js/settings-panel.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
