@@ -92,7 +92,7 @@ html, body{
 .league-tag .sub{
   font-family: 'Teko', sans-serif;
   font-weight: 500;
-  font-size: 15px;
+  font-size: 20px;
   color: var(--accent);
   letter-spacing: 2px;
   white-space: nowrap;
@@ -138,6 +138,7 @@ html, body{
   font-weight: 700;
   font-size: 21px;
   color: var(--text);
+  margin: 0 6px;
 }
 .team.win{ color: var(--accent); }
 
@@ -195,7 +196,7 @@ html, body{
    ============================================================ */
 .score-box{
   flex: 0 0 auto;
-  width: 620px;
+  width: 450px;
   height: 100%;
   position: relative;
   overflow: hidden;
@@ -224,13 +225,18 @@ html, body{
   transform-origin: center center;
 }
 
+.score-week-label{
+  font-family: 'Teko', sans-serif;
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
 .score-row{
   display: flex;
   align-items: center;
-}
-
-.score-row.full-span{
-  justify-content: center;
 }
 
 .game-label{
@@ -242,15 +248,10 @@ html, body{
   letter-spacing: 1px;
 }
 
-.score-row.scheduled{
-  opacity: .7;
-}
-
-.scheduled-text{
+.not-played{
   font-family: 'Baloo 2', sans-serif;
   font-weight: 600;
-  font-size: 16px;
-  font-style: italic;
+  font-size: 19px;
   color: rgba(244,239,225,.55);
   margin-left: 10px;
 }

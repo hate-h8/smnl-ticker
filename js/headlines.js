@@ -1,9 +1,5 @@
 // ============================================================
 // HEADLINES
-// Renders the scrolling headline track. The track's HTML is
-// duplicated (rendered twice back-to-back) so the CSS marquee
-// animation (.track, see styles.css) can loop seamlessly from
-// the end back to the start with no visible jump.
 // ============================================================
 
 const track = document.getElementById("track");

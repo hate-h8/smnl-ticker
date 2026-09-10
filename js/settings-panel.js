@@ -1,12 +1,5 @@
 // ============================================================
 // SETTINGS PANEL
-// The click-to-open overlay: color pickers (backed by THEME_META /
-// currentTheme from config.js/state.js), headline rows (backed
-// by currentHeadlines), and the Import/Export text box for
-// copying settings between machines. Everything here writes
-// through persistTheme() / persistHeadlines() (state.js), which
-// saves to localStorage and immediately re-renders - so edits
-// show up live on the ticker with no refresh needed.
 // ============================================================
 
 function escapeAttr(str) {
