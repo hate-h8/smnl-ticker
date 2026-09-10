@@ -41,7 +41,7 @@ const STORAGE_HEADLINES_KEY = "smnl_ticker_headlines_v1";
 
 // ---- Supabase (scores backend) -----------------------------------
 const SUPABASE_URL = "https://hhjmginyyvcrngvcnhdb.supabase.co";
-const SUPABASE_API_KEY = "sb_publishable_JSBxFG27P4j44Ou1ivP3gw_oSBm-AVs";
+const SUPABASE_ANON_KEY = "sb_publishable_JSBxFG27P4j44Ou1ivP3gw_oSBm-AVs";
 
 // One entry per league/season shown in the score box rotation.
 const LEAGUES = [
