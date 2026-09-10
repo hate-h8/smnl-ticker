@@ -27,15 +27,17 @@
 <h1>SMNL Ticker — API Debug</h1>
 <p class="intro">
   This page loads the same <code>js/config.js</code> and <code>js/scores.js</code> the live ticker
-  uses, and calls the real <code>fetchRecentGames()</code> / <code>groupIntoPairs()</code> functions
+  uses, and calls the real <code>fetchGames()</code> / <code>groupIntoPairs()</code> functions
   directly - not a copy of the logic. If this page comes back clean, the data layer is fine and any
   problem is in the ticker's rendering; if this page fails, the problem is the query/API/credentials,
   independent of anything OBS-related.
 </p>
 
-<button id="runBtn">Run test fetch</button><span id="timing"></span>
+<button id="runBtn">Run test fetch</button>
+<button id="probeBtn">Run probe only</button><span id="timing"></span>
 
 <div id="statusBox"></div>
+<div id="probeStatusBox"></div>
 
 <h2>Grouped into pairs (what the ticker actually cycles through)</h2>
 <div id="pairsOutput">(not run yet)</div>
@@ -43,44 +45,44 @@
 <h2>Raw rows returned</h2>
 <pre id="rawOutput">(not run yet)</pre>
 
-<!-- Deliberately reusing the real files, not duplicating logic here.
-     Note: scores.js also does a few document.getElementById() calls
-     for ticker elements that don't exist on this page - those just
-     resolve to null, which is harmless as long as we never call the
-     ticker-rendering functions (showScore/startScoreCycle/etc) that
-     would need them. This page only calls fetchRecentGames() and
-     groupIntoPairs(), so that's fine. -->
 <script src="js/config.js"></script>
 <script src="js/scores.js"></script>
 <script>
 const runBtn = document.getElementById("runBtn");
+const probeBtn = document.getElementById("probeBtn");
 const statusBox = document.getElementById("statusBox");
+const probeStatusBox = document.getElementById("probeStatusBox");
 const rawOutput = document.getElementById("rawOutput");
 const pairsOutput = document.getElementById("pairsOutput");
 const timingEl = document.getElementById("timing");
 
-function setStatus(kind, text) {
-  statusBox.innerHTML = `<div class="status ${kind}">${text}</div>`;
+function setStatus(box, kind, text) {
+  box.innerHTML = `<div class="status ${kind}">${text}</div>`;
 }
 
+// Mirrors the three states renderGameRow (scores.js) can render:
+// a final game (real score), a not-yet-final game (real team names,
+// no score), or no game at all in this slot.
 function renderPairSummary(game, label) {
-  if (!game) return `<div class="row missing">${label}: no second game in this fetch window (may or may not exist/be played - see groupIntoPairs comment in scores.js)</div>`;
+  if (!game) return `<div class="row missing">${label}: no game in this slot (only one game was ever scheduled for this matchup/week)</div>`;
+  if (!game.isFinal) return `<div class="row missing">${label}: ${game.away} @ ${game.home} — not yet played (id ${game.id})</div>`;
   const tag = game.innings && game.innings !== 9 ? ` (F/${game.innings})` : "";
   return `<div class="row">${label}: ${game.away} ${game.awayScore} @ ${game.homeScore} ${game.home}${tag} — id ${game.id}, finalized ${game.finalizedAt}</div>`;
 }
 
 async function runTest() {
-  setStatus("pending", "Fetching…");
+  setStatus(statusBox, "pending", "Fetching…");
   rawOutput.textContent = "(loading)";
   pairsOutput.textContent = "(loading)";
   timingEl.textContent = "";
   const start = performance.now();
 
   try {
-    const games = await fetchRecentGames();
+    const games = await fetchGames();
     const elapsed = Math.round(performance.now() - start);
     timingEl.textContent = `(${elapsed}ms)`;
-    setStatus("ok", `✓ Success — received ${games.length} finalized game row(s).`);
+    const finalCount = games.filter((g) => g.isFinal).length;
+    setStatus(statusBox, "ok", `✓ Success — received ${games.length} game row(s), ${finalCount} finalized.`);
     rawOutput.textContent = JSON.stringify(games, null, 2);
 
     const pairs = groupIntoPairs(games);
@@ -99,15 +101,37 @@ async function runTest() {
   } catch (err) {
     const elapsed = Math.round(performance.now() - start);
     timingEl.textContent = `(${elapsed}ms)`;
-    setStatus("err", `✗ Failed — ${err.message}`);
+    setStatus(statusBox, "err", `✗ Failed — ${err.message}`);
     rawOutput.textContent = String(err.stack || err);
     pairsOutput.textContent = "(fetch failed, nothing to group)";
     console.error(err);
   }
 }
 
+// Tests just the cheap probe query in isolation - useful to
+// confirm it works, and to see the raw timestamp it returns,
+// without triggering the full/expensive fetch alongside it.
+async function runProbeTest() {
+  setStatus(probeStatusBox, "pending", "Probing…");
+  const start = performance.now();
+  try {
+    const latest = await probeLatestFinalizedAt();
+    const elapsed = Math.round(performance.now() - start);
+    setStatus(
+      probeStatusBox,
+      "ok",
+      `✓ Probe OK (${elapsed}ms) — most recent finalized_at: ${latest || "(none found)"}`
+    );
+  } catch (err) {
+    const elapsed = Math.round(performance.now() - start);
+    setStatus(probeStatusBox, "err", `✗ Probe failed (${elapsed}ms) — ${err.message}`);
+    console.error(err);
+  }
+}
+
 runBtn.addEventListener("click", runTest);
-// Also run once automatically, so you can just open the page and see results.
+probeBtn.addEventListener("click", runProbeTest);
+// Also run the full test once automatically, so you can just open the page and see results.
 runTest();
 </script>
 </body>

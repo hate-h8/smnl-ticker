@@ -1,12 +1,5 @@
 // ============================================================
 // SCORES
-// Pulls the most recent FINALIZED games from Supabase (across
-// all real, non-test leagues - filtering happens server-side)
-// and pairs them up client-side (the two games played per week
-// between the same two teams), cycling through them in the
-// score box on the left. Also owns fitScoreContent(), which
-// shrinks/grows the score text to fit the box regardless of
-// team name length.
 // ============================================================
 
 const scoreBox = document.getElementById("scoreBox");
@@ -17,22 +10,58 @@ let scoreItems = [];
 let scoreIndex = 0;
 let scoreTimer = null;
 
-// Fetches the RESULTS_LIMIT most recently finalized games across
-// every non-test league, and normalizes each row into the shape
-// the rest of this file works with.
-async function fetchRecentGames() {
+// Looks up, per non-test league, the season with the highest
+// `number` - i.e. the current one - and returns just their season
+// ids. This is a small/cheap request (one row per league, not per
+// game), run once at the start of every fetchGames() call.
+async function fetchCurrentSeasonIds() {
+  const params = new URLSearchParams({
+    select: "id,number,leagues!inner(id,is_test)",
+    "leagues.is_test": "eq.false",
+  });
+  const url = `${SUPABASE_URL}/rest/v1/seasons?${params.toString()}`;
+  const res = await fetch(url, {
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+  });
+  if (!res.ok) throw new Error(`Supabase seasons request failed: ${res.status}`);
+  const rows = await res.json();
+
+  const currentByLeague = new Map(); // league id -> {id, number} of its highest-numbered season
+  rows.forEach((s) => {
+    const leagueId = s.leagues ? s.leagues.id : null;
+    if (leagueId == null) return;
+    const existing = currentByLeague.get(leagueId);
+    if (!existing || s.number > existing.number) {
+      currentByLeague.set(leagueId, { id: s.id, number: s.number });
+    }
+  });
+  return [...currentByLeague.values()].map((s) => s.id);
+}
+
+// Fetches every game in the current season (see fetchCurrentSeasonIds
+// above) across every non-test league - played or not - and
+// normalizes each row into the shape the rest of this file works
+// with.
+async function fetchGames() {
+  const currentSeasonIds = await fetchCurrentSeasonIds();
+  if (!currentSeasonIds.length) {
+    console.error("No current season found (no non-test leagues with a season?) - showing nothing.");
+    return [];
+  }
+
   const params = new URLSearchParams({
     select:
-      "id,week,innings,finalized_at,home_team_id,away_team_id," +
+      "id,week,innings,finalized_at,status,home_team_id,away_team_id," +
       "seasons!inner(number,leagues!inner(name,slug,is_test))," +
       "home:teams!home_team_id(name,abbrev,owner:users!owner_id(display_name,handle))," +
       "away:teams!away_team_id(name,abbrev,owner:users!owner_id(display_name,handle))," +
       "game_team_stats(team_id,runs)",
-    status: "eq.final",
-    finalized_at: "not.is.null",
-    "seasons.leagues.is_test": "eq.false",
-    order: "finalized_at.desc",
-    limit: String(RESULTS_LIMIT),
+    season_id: `in.(${currentSeasonIds.join(",")})`,
+    or: "(status.neq.final,finalized_at.not.is.null)",
+    order: "week.desc,id.desc",
   });
   const url = `${SUPABASE_URL}/rest/v1/games?${params.toString()}`;
   const res = await fetch(url, {
@@ -46,6 +75,7 @@ async function fetchRecentGames() {
 
   return rows.map((g) => {
     const stats = g.game_team_stats || [];
+    // Match by team_id, not an is_home flag - see file header note.
     const homeLine = stats.find((l) => l.team_id === g.home_team_id);
     const awayLine = stats.find((l) => l.team_id === g.away_team_id);
     return {
@@ -53,6 +83,7 @@ async function fetchRecentGames() {
       week: g.week,
       innings: g.innings,
       finalizedAt: g.finalized_at,
+      isFinal: g.status === "final",
       league: g.seasons && g.seasons.leagues ? g.seasons.leagues.name : null,
       homeTeamId: g.home_team_id,
       awayTeamId: g.away_team_id,
@@ -64,16 +95,6 @@ async function fetchRecentGames() {
   });
 }
 
-// Groups a flat list of finalized games into "pairs" - the (up
-// to) two games played in a given week between the same two
-// teams - sorted most recent first. A "pair" with only one game
-// is rendered as a single row (see renderScoreInner) rather than
-// guessing the second is "not yet played": since this query only
-// ever returns already-finalized games, a missing second game
-// might genuinely not exist yet, OR might have been played and
-// finalized but simply fallen outside this fetch's RESULTS_LIMIT
-// window (config.js) - we have no way to tell those apart, so we
-// don't claim either one.
 function groupIntoPairs(games) {
   const groups = new Map();
   games.forEach((g) => {
@@ -86,30 +107,40 @@ function groupIntoPairs(games) {
 
   const pairs = [];
   groups.forEach((arr) => {
+    if (!arr.some((g) => g.isFinal)) return; // nothing played yet - skip
     arr.sort((a, b) => a.id - b.id); // stand-in for game order, see file header
     pairs.push({
       league: arr[0].league,
       week: arr[0].week,
-      latestFinalizedAt: Math.max(...arr.map((g) => Date.parse(g.finalizedAt))),
+      latestId: Math.max(...arr.map((g) => g.id)),
       game1: arr[0] || null,
       game2: arr[1] || null,
     });
   });
 
-  pairs.sort((a, b) => b.latestFinalizedAt - a.latestFinalizedAt);
+  pairs.sort((a, b) => b.week - a.week || b.latestId - a.latestId);
   return pairs;
 }
 
-// Renders a single game line. `label` ("G1"/"G2") is only shown
-// when there's a second game to disambiguate from - a solo game
-// gets no label at all, see renderScoreInner.
 function renderGameRow(game, label) {
-  if (!game) return "";
+  if (!game) return ""; // shouldn't happen in practice - groupIntoPairs always fills game1
+  const labelHtml = label ? `<span class="game-label">${label}</span>` : "";
+
+  if (!game.isFinal) {
+    return `
+      <div class="score-row">
+        ${labelHtml}
+        <span class="team">${game.away}</span>
+        <span class="at">@</span>
+        <span class="team">${game.home}</span>
+        <span class="not-played">Not yet played</span>
+      </div>`;
+  }
+
   const awayWin = game.awayScore > game.homeScore;
   const homeWin = game.homeScore > game.awayScore;
   const showFinalTag = game.innings && game.innings !== 9;
   const finalTag = showFinalTag ? `<span class="final-tag">F/${game.innings}</span>` : "";
-  const labelHtml = label ? `<span class="game-label">${label}</span>` : "";
   return `
     <div class="score-row">
       ${labelHtml}
@@ -122,17 +153,14 @@ function renderGameRow(game, label) {
     </div>`;
 }
 
-// Two real games -> both rows, labeled G1/G2. Only one -> a single
-// unlabeled row, sized on its own
 function renderScoreInner(pair) {
+  const weekLabel = `<div class="score-week-label">Week ${pair.week}</div>`;
   if (pair.game2) {
-    return renderGameRow(pair.game1, "G1") + renderGameRow(pair.game2, "G2");
+    return weekLabel + renderGameRow(pair.game1, "G1") + renderGameRow(pair.game2, "G2");
   }
-  return renderGameRow(pair.game1, null);
+  return weekLabel + renderGameRow(pair.game1, null);
 }
 
-// Shrinks/grows the score box's content so long team names still
-// fit inside the fixed-width box without wrapping or overflowing.
 function fitScoreContent() {
   const fit = scoreSlide.querySelector(".score-fit");
   if (!fit) return;
@@ -162,8 +190,6 @@ function showScore(index) {
   requestAnimationFrame(fitScoreContent);
 }
 
-// Starts (or restarts) the rotation through score pairs, one
-// pair every SCORE_INTERVAL_SECONDS.
 function startScoreCycle(items) {
   scoreItems = items;
   scoreIndex = 0;
@@ -177,12 +203,47 @@ function startScoreCycle(items) {
   }
 }
 
-// Fetches fresh scores from Supabase and restarts the cycle.
-// Called once on load and then every REFRESH_SECONDS.
+// Fetches fresh games from Supabase
 async function loadScores() {
-  const games = await fetchRecentGames().catch((err) => {
+  const games = await fetchGames().catch((err) => {
     console.error("Failed to load scores:", err);
     return [];
   });
   startScoreCycle(groupIntoPairs(games));
+}
+
+let lastSeenFinalizedAt = null;
+
+async function probeLatestFinalizedAt() {
+  const params = new URLSearchParams({
+    select: "finalized_at",
+    finalized_at: "not.is.null",
+    order: "finalized_at.desc",
+    limit: "1",
+  });
+  const url = `${SUPABASE_URL}/rest/v1/games?${params.toString()}`;
+  const res = await fetch(url, {
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+  });
+  if (!res.ok) throw new Error(`Supabase probe failed: ${res.status}`);
+  const rows = await res.json();
+  return rows.length ? rows[0].finalized_at : null;
+}
+
+// Runs the probe
+async function checkForUpdates() {
+  let latest;
+  try {
+    latest = await probeLatestFinalizedAt();
+  } catch (err) {
+    console.error("Probe failed, skipping this check:", err);
+    return;
+  }
+  if (latest && (!lastSeenFinalizedAt || latest > lastSeenFinalizedAt)) {
+    lastSeenFinalizedAt = latest;
+    await loadScores();
+  }
 }

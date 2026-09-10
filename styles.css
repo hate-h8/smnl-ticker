@@ -225,6 +225,17 @@ html, body{
   transform-origin: center center;
 }
 
+/* Sits above the G1/G2 rows in a score-box slide, showing which
+   week the series belongs to. */
+.score-week-label{
+  font-family: 'Teko', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
 .score-row{
   display: flex;
   align-items: center;
@@ -237,6 +248,14 @@ html, body{
   color: var(--accent);
   margin-right: 10px;
   letter-spacing: 1px;
+}
+
+.not-played{
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 600;
+  font-size: 19px;
+  color: rgba(244,239,225,.55);
+  margin-left: 10px;
 }
 
 @keyframes score-enter{

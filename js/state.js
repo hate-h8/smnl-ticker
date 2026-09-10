@@ -2,10 +2,7 @@
 // STATE
 // The two pieces of user-editable state (colors + headlines),
 // plus loading/saving them to localStorage and applying the
-// theme to the page's CSS variables. This is what the Settings
-// panel (settings-panel.js) reads from and writes to - editing
-// a color or headline there calls persistTheme()/persistHeadlines()
-// below, which is what makes edits show up live with no refresh.
+// theme to the page's CSS variables.
 // ============================================================
 
 let currentTheme = { ...DEFAULT_THEME };
