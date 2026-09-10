@@ -92,7 +92,7 @@ html, body{
 .league-tag .sub{
   font-family: 'Teko', sans-serif;
   font-weight: 500;
-  font-size: 15px;
+  font-size: 20px;
   color: var(--accent);
   letter-spacing: 2px;
   white-space: nowrap;
@@ -196,7 +196,7 @@ html, body{
    ============================================================ */
 .score-box{
   flex: 0 0 auto;
-  width: 620px;
+  width: 450px;
   height: 100%;
   position: relative;
   overflow: hidden;
@@ -225,12 +225,10 @@ html, body{
   transform-origin: center center;
 }
 
-/* Sits above the G1/G2 rows in a score-box slide, showing which
-   week the series belongs to. */
 .score-week-label{
   font-family: 'Teko', sans-serif;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 18px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
   color: var(--accent);
