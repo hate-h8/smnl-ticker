@@ -11,7 +11,8 @@
   --headline-bg-top: #12233B;
   --headline-bg-bottom: #12233B;
   --text: #FFFFFF;
-  --box-bg: #FE285B;
+  --box-bg-top: #921606;
+  --box-bg-bottom: #921606;
   --accent: #E2B22C;
   --greenscreen: #00FF00;
 }
@@ -77,10 +78,11 @@ html, body{
   justify-content: center;
   align-items: center;
   padding: 0 28px;
-  background: var(--box-bg);
+  background: linear-gradient(180deg, var(--box-bg-top) 0%, var(--box-bg-bottom) 100%);
   border-right: 4px solid var(--accent);
   z-index: 2;
 }
+
 .league-tag .name{
   font-family: 'Baloo 2', sans-serif;
   font-weight: 700;
@@ -89,6 +91,7 @@ html, body{
   letter-spacing: .5px;
   white-space: nowrap;
 }
+
 .league-tag .sub{
   font-family: 'Teko', sans-serif;
   font-weight: 500;
@@ -200,7 +203,7 @@ html, body{
   height: 100%;
   position: relative;
   overflow: hidden;
-  background: var(--box-bg);
+  background: linear-gradient(180deg, var(--box-bg-top) 0%, var(--box-bg-bottom) 100%);
   border-right: 4px solid var(--accent);
   z-index: 2;
 }

@@ -9,7 +9,8 @@
 const THEME_META = [
   { key: "--headline-bg-top",    label: "Headlines background (top)" },
   { key: "--headline-bg-bottom", label: "Headlines background (bottom)" },
-  { key: "--box-bg",             label: "League/score box background" },
+  { key: "--box-bg-top",         label: "League/score box background (top)" },
+  { key: "--box-bg-bottom",      label: "League/score box background (bottom)" },
   { key: "--accent",             label: "Accent (borders, highlights)" },
   { key: "--text",               label: "Text color" },
 ];
@@ -19,7 +20,8 @@ const THEME_META = [
 const DEFAULT_THEME = {
   "--headline-bg-top": "#12233B",
   "--headline-bg-bottom": "#12233B",
-  "--box-bg": "#921606",
+  "--box-bg-top": "#921606",
+  "--box-bg-bottom": "#921606",
   "--accent": "#E2B22C",
   "--text": "#FFFFFF",
   "--greenscreen": "#00FF00",
