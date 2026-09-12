@@ -3,7 +3,6 @@
 // ============================================================
 
 const track = document.getElementById("track");
-document.documentElement.style.setProperty("--duration", SCROLL_SECONDS + "s");
 
 function renderHeadlineInner(it) {
   return `
@@ -14,10 +13,17 @@ function renderHeadlineInner(it) {
     </div>`;
 }
 
+function applyScrollDuration() {
+  const oneLapDistance = track.scrollWidth / 2;
+  const duration = oneLapDistance / SCROLL_PIXELS_PER_SECOND;
+  document.documentElement.style.setProperty("--duration", duration + "s");
+}
+
 function renderHeadlines(items) {
   let html = "";
   items.forEach((it) => {
     html += renderHeadlineInner(it) + `<div class="divider"></div>`;
   });
   track.innerHTML = html + html; // duplicated for the seamless scroll loop
+  applyScrollDuration();
 }

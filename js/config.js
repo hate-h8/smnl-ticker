@@ -43,9 +43,9 @@ const SUPABASE_URL = "https://hhjmginyyvcrngvcnhdb.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_JSBxFG27P4j44Ou1ivP3gw_oSBm-AVs";
 
 
-const PROBE_INTERVAL_SECONDS = 90;  // how long until probing db for updated game
-const SCROLL_SECONDS = 45;          // how long one full headline scroll loop takes
-const SCORE_INTERVAL_SECONDS = 10;  // how long each score pair displays before cycling
+const PROBE_INTERVAL_SECONDS = 90;   // how long until probing db for updated game
+const SCROLL_PIXELS_PER_SECOND = 90; // headline scrolling speed
+const SCORE_INTERVAL_SECONDS = 10;   // how long each score pair displays before cycling
 
 // ---- Scaling -----------------------------------------------------------
 // The ticker is authored at this fixed design width; scaling.js
