@@ -27,33 +27,37 @@
 
 <div class="settings-overlay" id="settingsOverlay">
   <div class="settings-card">
-    <h2>Ticker Settings</h2>
-    <p class="hint">In OBS's Interact window, click anywhere on the page to open this panel. Changes apply live and save automatically. Click <strong>Done</strong> below when you're finished - that's the only thing that closes it, so nothing you type can accidentally dismiss it. Set the OBS Browser Source to match your canvas resolution, then add a <strong>Chroma Key</strong> filter on it (Custom Color, matched to the "Greenscreen" swatch below) so only the ticker bar shows over your scene.</p>
+    <div class="settings-body">
+      <h2>Ticker Settings</h2>
+      <p class="hint">In OBS's Interact window, click anywhere on the page to open this panel. Changes apply live and save automatically. Click <strong>Done</strong> below when you're finished - that's the only thing that closes it, so nothing you type can accidentally dismiss it. Set the OBS Browser Source to match your canvas resolution, then add a <strong>Chroma Key</strong> filter on it (Custom Color, matched to the "Greenscreen" swatch below) so only the ticker bar shows over your scene.</p>
 
-    <div class="settings-section">
-      <h3>Colors</h3>
-      <div id="colorRows"></div>
-    </div>
+      <div class="settings-section">
+        <h3>Colors</h3>
+        <div id="colorRows"></div>
+      </div>
 
-    <div class="settings-section">
-      <h3>Headlines</h3>
-      <div id="headlineRows"></div>
-      <button class="btn btn-outline" id="addHeadlineBtn" type="button">+ Add headline</button>
-    </div>
+      <div class="settings-section">
+        <h3>Headlines</h3>
+        <div id="headlineRows"></div>
+        <button class="btn btn-outline" id="addHeadlineBtn" type="button">+ Add headline</button>
+      </div>
 
-    <div class="settings-section">
-      <h3>Transfer</h3>
-      <p class="hint">When you are done editing the colors (outside of OBS), open this modal again in OBS, then paste it in the box, then select Load.</p>
-      <textarea class="import-export" id="importExportBox" placeholder="Click 'Copy current settings' to fill this in"></textarea>
-      <div class="btn-row">
-        <button class="btn btn-outline" id="exportBtn" type="button">Copy current settings</button>
-        <button class="btn btn-outline" id="importBtn" type="button">Load settings above</button>
+      <div class="settings-section">
+        <h3>Transfer</h3>
+        <p class="hint">When you are done editing the colors (outside of OBS), open this modal again in OBS, then paste it in the box, then select Load.</p>
+        <textarea class="import-export" id="importExportBox" placeholder="Click 'Copy current settings' to fill this in"></textarea>
+        <div class="btn-row">
+          <button class="btn btn-outline" id="exportBtn" type="button">Copy current settings</button>
+          <button class="btn btn-outline" id="importBtn" type="button">Load settings above</button>
+        </div>
       </div>
     </div>
 
-    <div class="btn-row">
-      <button class="btn btn-gold" id="closePanelBtn" type="button">Done</button>
-      <button class="btn btn-outline" id="resetBtn" type="button">Reset to defaults</button>
+    <div class="settings-footer">
+      <div class="btn-row">
+        <button class="btn btn-gold" id="closePanelBtn" type="button">Done</button>
+        <button class="btn btn-outline" id="resetBtn" type="button">Reset to defaults</button>
+      </div>
     </div>
   </div>
 </div>
