@@ -288,12 +288,25 @@ html, body{
   background: #12233B;
   border: 3px solid #E2B22C;
   border-radius: 12px;
-  padding: 24px 28px;
   width: 520px;
   max-width: 90vw;
   max-height: 85vh;
-  overflow-y: auto;
   color: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.settings-body{
+  overflow-y: auto;
+  padding: 24px 28px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.settings-footer{
+  flex: 0 0 auto;
+  padding: 16px 28px 20px;
+  border-top: 1px solid rgba(255,255,255,.15);
 }
 .settings-card h2{ margin: 0 0 4px; font-size: 20px; color: #E2B22C; }
 .settings-card p.hint{ margin: 0 0 18px; font-size: 13px; color: rgba(255,255,255,.7); line-height: 1.4; }
@@ -312,6 +325,11 @@ html, body{
   cursor: pointer; background: none; padding: 0;
 }
 
+#headlineRows{
+  max-height: 220px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
 .headline-row{ display: flex; gap: 6px; margin-bottom: 8px; }
 .headline-row input[type=text]{
   background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.35);
