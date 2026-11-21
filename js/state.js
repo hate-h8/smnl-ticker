@@ -7,6 +7,7 @@
 
 let currentTheme = { ...DEFAULT_THEME };
 let currentHeadlines = [...DEFAULT_HEADLINES];
+let currentDisplay = { ...DEFAULT_DISPLAY };
 
 function loadSettingsFromStorage() {
   try {
@@ -21,6 +22,12 @@ function loadSettingsFromStorage() {
     if (Array.isArray(parsed) && parsed.length) currentHeadlines = parsed;
   } catch (e) {
     console.error("Failed to load saved headlines:", e);
+  }
+  try {
+    const d = localStorage.getItem(STORAGE_DISPLAY_KEY);
+    if (d) currentDisplay = { ...DEFAULT_DISPLAY, ...JSON.parse(d) };
+  } catch (e) {
+    console.error("Failed to load saved display options:", e);
   }
 }
 
@@ -42,4 +49,10 @@ function persistTheme() {
 function persistHeadlines() {
   localStorage.setItem(STORAGE_HEADLINES_KEY, JSON.stringify(currentHeadlines));
   renderHeadlines(currentHeadlines.length ? currentHeadlines : DEFAULT_HEADLINES);
+}
+
+// Save + re-filter the scores already loaded.
+function persistDisplay() {
+  localStorage.setItem(STORAGE_DISPLAY_KEY, JSON.stringify(currentDisplay));
+  refreshScoreDisplay();
 }

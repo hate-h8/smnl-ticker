@@ -37,6 +37,12 @@ const DEFAULT_HEADLINES = [
 // ---- localStorage keys ------------------------------------------
 const STORAGE_THEME_KEY = "smnl_ticker_theme_v1";
 const STORAGE_HEADLINES_KEY = "smnl_ticker_headlines_v1";
+const STORAGE_DISPLAY_KEY = "smnl_ticker_display_v1";
+
+// ---- Display options ---------------------------------------------
+const DEFAULT_DISPLAY = {
+  playoffsOnly: false, // true = only show playoff games in the ticker
+};
 
 // ---- Supabase (scores backend) -----------------------------------
 const SUPABASE_URL = "https://hhjmginyyvcrngvcnhdb.supabase.co";
