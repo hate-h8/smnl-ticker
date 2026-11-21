@@ -325,6 +325,14 @@ html, body{
   cursor: pointer; background: none; padding: 0;
 }
 
+.check-row{
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 8px; font-size: 14px; cursor: pointer;
+}
+.check-row input[type=checkbox]{
+  width: 18px; height: 18px; cursor: pointer; accent-color: #E2B22C;
+}
+
 #headlineRows{
   max-height: 220px;
   overflow-y: auto;

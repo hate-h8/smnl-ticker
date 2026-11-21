@@ -6,6 +6,7 @@ const scoreBox = document.getElementById("scoreBox");
 const scoreSlide = document.getElementById("scoreSlide");
 const leagueName = document.getElementById("leagueName");
 
+let allGames = []; // every game from the last fetch, before display filters
 let scoreItems = [];
 let scoreIndex = 0;
 let scoreTimer = null;
@@ -88,6 +89,7 @@ async function fetchGames() {
     return {
       id: g.id,
       week: g.week,
+      isPlayoff: g.playoff_series != null && String(g.playoff_series).trim() !== "",
       playoffRound: playoffRoundFromSeries(g.playoff_series),
       innings: g.innings,
       finalizedAt: g.finalized_at,
@@ -120,6 +122,7 @@ function groupIntoPairs(games) {
     pairs.push({
       league: arr[0].league,
       week: arr[0].week,
+      isPlayoff: arr[0].isPlayoff,
       playoffRound: arr[0].playoffRound,
       latestId: Math.max(...arr.map((g) => g.id)),
       game1: arr[0] || null,
@@ -187,7 +190,20 @@ function fitScoreContent() {
 
 function showScore(index) {
   if (!scoreItems.length) {
-    scoreBox.style.display = "none";
+    if (currentDisplay.playoffsOnly) {
+      // Playoffs-only is on but there's nothing to show yet - say so
+      // instead of leaving the score box empty.
+      scoreBox.style.display = "block";
+      leagueName.textContent = "SMNL";
+      scoreSlide.classList.remove("enter");
+      scoreSlide.innerHTML =
+        `<div class="score-fit"><div class="score-row"><span class="not-played">No playoff games yet</span></div></div>`;
+      void scoreSlide.offsetWidth;
+      scoreSlide.classList.add("enter");
+      requestAnimationFrame(fitScoreContent);
+    } else {
+      scoreBox.style.display = "none";
+    }
     return;
   }
   scoreBox.style.display = "block";
@@ -219,6 +235,12 @@ async function loadScores() {
     console.error("Failed to load scores:", err);
     return [];
   });
+  allGames = games;
+  refreshScoreDisplay();
+}
+
+function refreshScoreDisplay() {
+  const games = currentDisplay.playoffsOnly ? allGames.filter((g) => g.isPlayoff) : allGames;
   startScoreCycle(groupIntoPairs(games));
 }
 

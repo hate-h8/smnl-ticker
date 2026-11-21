@@ -58,8 +58,19 @@ function buildHeadlineRows() {
   });
 }
 
+function buildDisplayControls() {
+  const playoffsOnly = document.getElementById("playoffsOnlyCheckbox");
+  playoffsOnly.checked = !!currentDisplay.playoffsOnly;
+}
+
+document.getElementById("playoffsOnlyCheckbox").addEventListener("change", (e) => {
+  currentDisplay.playoffsOnly = e.target.checked;
+  persistDisplay();
+});
+
 const overlay = document.getElementById("settingsOverlay");
 function openPanel() {
+  buildDisplayControls();
   buildColorRows();
   buildHeadlineRows();
   overlay.classList.add("open");
@@ -75,18 +86,21 @@ document.getElementById("addHeadlineBtn").addEventListener("click", () => {
 });
 
 document.getElementById("resetBtn").addEventListener("click", () => {
-  if (!confirm("Reset colors and headlines to the built-in defaults?")) return;
+  if (!confirm("Reset colors, headlines, and display options to the built-in defaults?")) return;
   currentTheme = { ...DEFAULT_THEME };
   currentHeadlines = [...DEFAULT_HEADLINES];
+  currentDisplay = { ...DEFAULT_DISPLAY };
   persistTheme();
   persistHeadlines();
+  persistDisplay();
+  buildDisplayControls();
   buildColorRows();
   buildHeadlineRows();
 });
 
 document.getElementById("exportBtn").addEventListener("click", () => {
   const box = document.getElementById("importExportBox");
-  box.value = JSON.stringify({ theme: currentTheme, headlines: currentHeadlines }, null, 2);
+  box.value = JSON.stringify({ theme: currentTheme, headlines: currentHeadlines, display: currentDisplay }, null, 2);
   box.select();
   try {
     document.execCommand("copy");
@@ -99,8 +113,11 @@ document.getElementById("importBtn").addEventListener("click", () => {
     const data = JSON.parse(box.value);
     if (data.theme) currentTheme = { ...DEFAULT_THEME, ...data.theme };
     if (Array.isArray(data.headlines)) currentHeadlines = data.headlines;
+    if (data.display) currentDisplay = { ...DEFAULT_DISPLAY, ...data.display };
     persistTheme();
     persistHeadlines();
+    persistDisplay();
+    buildDisplayControls();
     buildColorRows();
     buildHeadlineRows();
     alert("Settings loaded.");
