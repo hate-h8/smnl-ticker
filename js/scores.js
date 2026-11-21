@@ -41,6 +41,13 @@ async function fetchCurrentSeasonIds() {
   return [...currentByLeague.values()].map((s) => s.id);
 }
 
+// playoff_series is null for regular season games.
+function playoffRoundFromSeries(series) {
+  if (series == null) return null;
+  const round = String(series).replace(/\s*\d+\s*$/, "").trim();
+  return round || null;
+}
+
 // Fetches every game in the current season (see fetchCurrentSeasonIds
 // above) across every non-test league - played or not - and
 // normalizes each row into the shape the rest of this file works
@@ -54,7 +61,7 @@ async function fetchGames() {
 
   const params = new URLSearchParams({
     select:
-      "id,week,innings,finalized_at,status,home_team_id,away_team_id," +
+      "id,week,playoff_series,innings,finalized_at,status,home_team_id,away_team_id," +
       "seasons!inner(number,leagues!inner(name,slug,is_test))," +
       "home:teams!home_team_id(name,abbrev,owner:users!owner_id(display_name,handle))," +
       "away:teams!away_team_id(name,abbrev,owner:users!owner_id(display_name,handle))," +
@@ -81,6 +88,7 @@ async function fetchGames() {
     return {
       id: g.id,
       week: g.week,
+      playoffRound: playoffRoundFromSeries(g.playoff_series),
       innings: g.innings,
       finalizedAt: g.finalized_at,
       isFinal: g.status === "final",
@@ -112,6 +120,7 @@ function groupIntoPairs(games) {
     pairs.push({
       league: arr[0].league,
       week: arr[0].week,
+      playoffRound: arr[0].playoffRound,
       latestId: Math.max(...arr.map((g) => g.id)),
       game1: arr[0] || null,
       game2: arr[1] || null,
@@ -154,7 +163,8 @@ function renderGameRow(game, label) {
 }
 
 function renderScoreInner(pair) {
-  const weekLabel = `<div class="score-week-label">Week ${pair.week}</div>`;
+  const headerText = pair.playoffRound ? pair.playoffRound : `Week ${pair.week}`;
+  const weekLabel = `<div class="score-week-label">${headerText}</div>`;
   if (pair.game2) {
     return weekLabel + renderGameRow(pair.game1, "G1") + renderGameRow(pair.game2, "G2");
   }

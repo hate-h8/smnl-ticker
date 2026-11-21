@@ -91,7 +91,7 @@ async function runTest() {
           .map(
             (p) => `
         <div class="pair">
-          <div class="pair-header">${p.league || "(no league name)"} — Week ${p.week}</div>
+          <div class="pair-header">${p.league || "(no league name)"} — ${p.playoffRound || "Week " + p.week}</div>
           ${renderPairSummary(p.game1, "G1")}
           ${renderPairSummary(p.game2, "G2")}
         </div>`
